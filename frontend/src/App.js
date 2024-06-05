@@ -1,8 +1,9 @@
 // src/App.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 import Board from './components/Board';
-import { Chess } from 'chess.js';
+import axios from 'axios';
+import { Chess } from 'chess.js'
 
 const App = () => {
   const getPokemonForPiece = (piece) => {
@@ -33,27 +34,27 @@ const App = () => {
     return pieces;
   };
 
-  const updatePieces = (board) => {
-    let pieces = {};
-    board.forEach((row, y) => {
-      row.forEach((piece, x) => {
-        if (piece) {
-          pieces[`${x}${y}`] = {
-            type: piece.type,
-            color: piece.color,
-            pokemon: getPokemonForPiece(piece),
-          };
-        }
-      });
-    });
-    return pieces;
-  };
-
-  const [chess, setChess] = useState(new Chess());
-  const [pieces, setPieces] = useState(initializePieces(chess.board()));
+  const [gameId, setGameId] = useState(null);
+  const [pieces, setPieces] = useState([]);
   const [gameOver, setGameOver] = useState(null);
 
-  const movePiece = (fromX, fromY, toX, toY) => {
+  useEffect(() => {
+    const createGame = async () => {
+      try {
+        const response = await axios.post('http://localhost:5000/api/new-game');
+        setGameId(response.data.gameId);
+        const chess = new Chess();
+        chess.load(response.data.fen);
+        setPieces(initializePieces(chess.board()));
+      } catch (error) {
+        console.error('Error creating new game:', error);
+      }
+    };
+
+    createGame();
+  }, []);
+
+  const movePiece = async (fromX, fromY, toX, toY) => {
     const toAlgebraic = (x, y) => {
       const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
       return `${files[x]}${8 - y}`;
@@ -63,31 +64,29 @@ const App = () => {
     const to = toAlgebraic(toX, toY);
 
     try {
-      const move = chess.move({ from, to, promotion: 'q' });
+      const response = await axios.post(`http://localhost:5000/api/move/${gameId}`, { from, to });
+      const chess = new Chess();
+      chess.load(response.data.fen);
+      setPieces(initializePieces(chess.board()));
 
-      if (move === null) {
-        console.log(`Invalid move from ${from} to ${to}`);
-        return;
-      }
-
-      setPieces(updatePieces(chess.board()));
-
-      // Check for game over
-      if (chess.isCheckmate()) {
-        setGameOver(chess.turn() === 'w' ? 'Black wins!' : 'White wins!');
-      } else if (chess.isStalemate()) {
-        setGameOver('Draw!');
+      if (response.data.gameOver) {
+        setGameOver(response.data.gameOver);
       }
     } catch (error) {
       console.error(`Error during move from ${from} to ${to}:`, error);
     }
   };
 
-  const restartGame = () => {
-    const newChess = new Chess();
-    setChess(newChess);
-    setPieces(initializePieces(newChess.board()));
-    setGameOver(null);
+  const restartGame = async () => {
+    try {
+      const response = await axios.post(`http://localhost:5000/api/restart/${gameId}`);
+      const chess = new Chess();
+      chess.load(response.data.fen);
+      setPieces(initializePieces(chess.board()));
+      setGameOver(null);
+    } catch (error) {
+      console.error('Error restarting game:', error);
+    }
   };
 
   return (
