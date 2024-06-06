@@ -4,7 +4,11 @@ import { Navigate } from 'react-router-dom';
 import { useAuthState } from '../hooks/useAuthState';
 
 const ProtectedRoute = ({ children }) => {
-  const [user] = useAuthState();
+  const [user, loading] = useAuthState();
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   if (!user) {
     return <Navigate to="/login" />;

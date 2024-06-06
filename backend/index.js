@@ -18,7 +18,7 @@ app.get('/', (req, res) => {
 });
 
 // Connect to MongoDB Atlas
-const dbURI = 'mongodb+srv://Wambink:hello@cluster0.stcst1u.mongodb.net/pokemon-chess?retryWrites=true&w=majority';
+const dbURI = 'mongodb+srv://Wambink:hello@cluster0.stcst1u.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
 mongoose.connect(dbURI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -62,22 +62,19 @@ app.post('/api/move/:gameId', async (req, res) => {
     const chess = new Chess();
     chess.load(game.fen);
 
-    const move = chess.move({ from, to, promotion });
+    try {
+      const move = chess.move({ from, to, promotion });
+      if (move) {
+        game.fen = chess.fen();
+        game.updated_at = Date.now();
+        await game.save();
 
-    if (move) {
-      let gameOver = null;
-      if (chess.isCheckmate()) {
-        gameOver = chess.turn() === 'w' ? 'Black wins!' : 'White wins!';
-      } else if (chess.isDraw()) {
-        gameOver = 'Draw!';
+        res.json({ fen: game.fen, move });
+      } else {
+        res.status(400).json({ error: 'Invalid move' });
       }
-
-      game.fen = chess.fen();
-      game.updated_at = Date.now();
-      await game.save();
-
-      res.json({ fen: game.fen, move, gameOver });
-    } else {
+    } catch (error) {
+      console.error(`Invalid move from ${from} to ${to}:`, error);
       res.status(400).json({ error: 'Invalid move' });
     }
   } else {

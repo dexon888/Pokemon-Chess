@@ -6,11 +6,18 @@ import { supabase } from '../supabaseClient';
 const Signup = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [message, setMessage] = useState('');
 
   const handleSignup = async (e) => {
     e.preventDefault();
-    const { error } = await supabase.auth.signUp({ email, password });
-    if (error) console.error('Error signing up:', error.message);
+    setMessage('');
+
+    const { error, user } = await supabase.auth.signUp({ email, password });
+    if (error) {
+      setMessage(`Error signing up: ${error.message}`);
+    } else {
+      setMessage('Signup successful! Please check your email for verification.');
+    }
   };
 
   return (
@@ -31,6 +38,7 @@ const Signup = () => {
         />
         <button type="submit">Signup</button>
       </form>
+      {message && <p>{message}</p>}
       <p>
         Already have an account? <Link to="/login">Login</Link>
       </p>

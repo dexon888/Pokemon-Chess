@@ -41,13 +41,13 @@ const App = () => {
   const [gameId, setGameId] = useState(null);
   const [pieces, setPieces] = useState([]);
   const [gameOver, setGameOver] = useState(null);
+  const [chess, setChess] = useState(new Chess());
 
   useEffect(() => {
     const createGame = async () => {
       try {
         const response = await axios.post('http://localhost:5000/api/new-game');
         setGameId(response.data.gameId);
-        const chess = new Chess();
         chess.load(response.data.fen);
         setPieces(initializePieces(chess.board()));
       } catch (error) {
@@ -69,7 +69,6 @@ const App = () => {
 
     try {
       const response = await axios.post(`http://localhost:5000/api/move/${gameId}`, { from, to });
-      const chess = new Chess();
       chess.load(response.data.fen);
       setPieces(initializePieces(chess.board()));
 
@@ -78,13 +77,14 @@ const App = () => {
       }
     } catch (error) {
       console.error(`Error during move from ${from} to ${to}:`, error);
+      // Reset the piece to its original position if the move is invalid
+      setPieces(initializePieces(chess.board()));
     }
   };
 
   const restartGame = async () => {
     try {
       const response = await axios.post(`http://localhost:5000/api/restart/${gameId}`);
-      const chess = new Chess();
       chess.load(response.data.fen);
       setPieces(initializePieces(chess.board()));
       setGameOver(null);
