@@ -1,39 +1,43 @@
-// src/App.js
+// src/App.jsx
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import Board from './components/Board';
 import axios from 'axios';
-import { Chess } from 'chess.js'
+import { Chess } from 'chess.js';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import Login from './components/Login.jsx';
+import Signup from './components/Signup.jsx';
+import ProtectedRoute from './components/ProtectedRoute.jsx';
+
+const getPokemonForPiece = (piece) => {
+  const pokemonMap = {
+    p: 'pikachu',
+    r: 'charizard',
+    n: 'bulbasaur',
+    b: 'squirtle',
+    q: 'mewtwo',
+    k: 'raichu',
+  };
+  return pokemonMap[piece.type] || 'pokeball';
+};
+
+const initializePieces = (board) => {
+  let pieces = {};
+  board.forEach((row, y) => {
+    row.forEach((piece, x) => {
+      if (piece) {
+        pieces[`${x}${y}`] = {
+          type: piece.type,
+          color: piece.color,
+          pokemon: getPokemonForPiece(piece),
+        };
+      }
+    });
+  });
+  return pieces;
+};
 
 const App = () => {
-  const getPokemonForPiece = (piece) => {
-    const pokemonMap = {
-      p: 'pikachu',
-      r: 'charizard',
-      n: 'bulbasaur',
-      b: 'squirtle',
-      q: 'mewtwo',
-      k: 'raichu',
-    };
-    return pokemonMap[piece.type] || 'pokeball';
-  };
-
-  const initializePieces = (board) => {
-    let pieces = {};
-    board.forEach((row, y) => {
-      row.forEach((piece, x) => {
-        if (piece) {
-          pieces[`${x}${y}`] = {
-            type: piece.type,
-            color: piece.color,
-            pokemon: getPokemonForPiece(piece),
-          };
-        }
-      });
-    });
-    return pieces;
-  };
-
   const [gameId, setGameId] = useState(null);
   const [pieces, setPieces] = useState([]);
   const [gameOver, setGameOver] = useState(null);
@@ -90,12 +94,23 @@ const App = () => {
   };
 
   return (
-    <div className="App">
-      <h1>Pokémon Chess</h1>
-      {gameOver && <h2>{gameOver}</h2>}
-      <Board pieces={pieces} movePiece={movePiece} />
-      <button onClick={restartGame}>Restart Game</button>
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/game" element={
+          <ProtectedRoute>
+            <div className="App">
+              <h1>Pokémon Chess</h1>
+              {gameOver && <h2>{gameOver}</h2>}
+              <Board pieces={pieces} movePiece={movePiece} />
+              <button onClick={restartGame}>Restart Game</button>
+            </div>
+          </ProtectedRoute>
+        } />
+        <Route path="/" element={<Login />} />
+      </Routes>
+    </Router>
   );
 };
 
