@@ -1,3 +1,4 @@
+// backend/index.js
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
@@ -8,7 +9,14 @@ const Game = require('./models/Game');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
+const io = socketIo(server, {
+  cors: {
+    origin: 'http://localhost:3000',
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['Content-Type'],
+    credentials: true
+  },
+});
 
 app.use(cors());
 app.use(express.json());
@@ -25,7 +33,7 @@ mongoose.connect(dbURI, {
 }).then(() => console.log('MongoDB connected'))
   .catch(err => console.error('MongoDB connection error:', err));
 
-// Create a new game
+// Define your API routes
 app.post('/api/new-game', async (req, res) => {
   const gameId = Date.now().toString();
   const chess = new Chess();
@@ -40,7 +48,6 @@ app.post('/api/new-game', async (req, res) => {
   }
 });
 
-// Get the current game state
 app.get('/api/game/:gameId', async (req, res) => {
   const gameId = req.params.gameId;
   const game = await Game.findOne({ gameId });
@@ -52,51 +59,65 @@ app.get('/api/game/:gameId', async (req, res) => {
   }
 });
 
-// Make a move
-app.post('/api/move/:gameId', async (req, res) => {
-  const gameId = req.params.gameId;
-  const { from, to, promotion } = req.body;
-  const game = await Game.findOne({ gameId });
+io.on('connection', (socket) => {
+  console.log('New client connected');
 
-  if (game) {
-    const chess = new Chess();
-    chess.load(game.fen);
+  socket.on('joinGame', async ({ gameId }) => {
+    socket.join(gameId);
+    const game = await Game.findOne({ gameId });
 
-    try {
-      const move = chess.move({ from, to, promotion });
-      if (move) {
-        game.fen = chess.fen();
-        game.updated_at = Date.now();
-        await game.save();
-
-        res.json({ fen: game.fen, move });
-      } else {
-        res.status(400).json({ error: 'Invalid move' });
-      }
-    } catch (error) {
-      console.error(`Invalid move from ${from} to ${to}:`, error);
-      res.status(400).json({ error: 'Invalid move' });
+    if (game) {
+      socket.emit('gameState', game.fen);
     }
-  } else {
-    res.status(404).json({ error: 'Game not found' });
-  }
-});
+  });
 
-// Restart a game
-app.post('/api/restart/:gameId', async (req, res) => {
-  const gameId = req.params.gameId;
-  const game = await Game.findOne({ gameId });
+  socket.on('makeMove', async ({ gameId, from, to, promotion }) => {
+    const game = await Game.findOne({ gameId });
 
-  if (game) {
-    const chess = new Chess();
-    game.fen = chess.fen();
-    game.updated_at = Date.now();
-    await game.save();
+    if (game) {
+      const chess = new Chess();
+      chess.load(game.fen);
 
-    res.json({ fen: game.fen });
-  } else {
-    res.status(404).json({ error: 'Game not found' });
-  }
+      try {
+        const move = chess.move({ from, to, promotion });
+        if (move) {
+          game.fen = chess.fen();
+          game.updated_at = Date.now();
+          await game.save();
+
+          io.to(gameId).emit('gameState', game.fen);
+
+          if (chess.isCheckmate()) {
+            io.to(gameId).emit('gameOver', chess.turn() === 'w' ? 'Black wins!' : 'White wins!');
+          } else if (chess.isStalemate()) {
+            io.to(gameId).emit('gameOver', 'Draw!');
+          }
+        } else {
+          socket.emit('invalidMove', 'Invalid move');
+        }
+      } catch (error) {
+        console.error(`Invalid move from ${from} to ${to}:`, error);
+        socket.emit('invalidMove', 'Invalid move');
+      }
+    }
+  });
+
+  socket.on('restartGame', async ({ gameId }) => {
+    const game = await Game.findOne({ gameId });
+
+    if (game) {
+      const chess = new Chess();
+      game.fen = chess.fen();
+      game.updated_at = Date.now();
+      await game.save();
+
+      io.to(gameId).emit('gameState', game.fen);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Client disconnected');
+  });
 });
 
 const PORT = process.env.PORT || 5000;
