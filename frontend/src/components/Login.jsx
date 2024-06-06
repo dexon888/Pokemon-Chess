@@ -13,18 +13,18 @@ const Login = () => {
     e.preventDefault();
     setMessage('');
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error, data } = await supabase.auth.signInWithPassword({ email, password });
 
-    console.log('Supabase response:', data);
+    console.log('Supabase response:', { error, data });
+
     if (error) {
       setMessage(`Error logging in: ${error.message}`);
     } else if (data?.user && !data.user.email_confirmed_at) {
       setMessage('Please verify your email address before logging in.');
     } else if (data?.user) {
-      console.log("User logged in, navigating to game page");
-      navigate('/game'); // Redirect to the chessboard page
+      navigate('/lobby'); // Redirect to the lobby page
     } else {
-      console.log("hello");
+      console.log("Login error");
     }
   };
 

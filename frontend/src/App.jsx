@@ -7,8 +7,9 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Login from './components/Login.jsx';
 import Signup from './components/Signup.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
-import Logout from './components/Logout.jsx';
+import Lobby from './components/Lobby.jsx';
 import io from 'socket.io-client';
+import Logout from './components/Logout.jsx';
 
 const getPokemonForPiece = (piece) => {
   const pokemonMap = {
@@ -117,7 +118,13 @@ const App = () => {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-        <Route path="/game" element={
+        <Route path="/lobby" element={
+          <ProtectedRoute>
+            <Lobby />
+            <Logout />
+          </ProtectedRoute>
+        } />
+        <Route path="/game/:gameId" element={
           <ProtectedRoute>
             <div className="App">
               <h1>Pokémon Chess</h1>

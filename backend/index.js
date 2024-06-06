@@ -1,4 +1,5 @@
 // backend/index.js
+
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
@@ -14,11 +15,10 @@ const io = socketIo(server, {
     origin: 'http://localhost:3000',
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type'],
-    credentials: true
   },
 });
 
-app.use(cors());
+app.use(cors({ origin: 'http://localhost:3000', methods: ['GET', 'POST'], allowedHeaders: ['Content-Type'] }));
 app.use(express.json());
 
 app.get('/', (req, res) => {
@@ -33,44 +33,38 @@ mongoose.connect(dbURI, {
 }).then(() => console.log('MongoDB connected'))
   .catch(err => console.error('MongoDB connection error:', err));
 
-// Define your API routes
-app.post('/api/new-game', async (req, res) => {
-  const gameId = Date.now().toString();
-  const chess = new Chess();
-  const newGame = new Game({ gameId, fen: chess.fen() });
-
-  try {
-    await newGame.save();
-    res.json({ gameId, fen: newGame.fen });
-  } catch (error) {
-    console.error('Error creating new game:', error);
-    res.status(500).json({ error: 'Error creating new game' });
-  }
-});
-
-app.get('/api/game/:gameId', async (req, res) => {
-  const gameId = req.params.gameId;
-  const game = await Game.findOne({ gameId });
-
-  if (game) {
-    res.json({ fen: game.fen });
-  } else {
-    res.status(404).json({ error: 'Game not found' });
-  }
-});
+let onlineUsers = [];
 
 io.on('connection', (socket) => {
   console.log('New client connected');
 
-  socket.on('joinGame', async ({ gameId }) => {
-    socket.join(gameId);
-    const game = await Game.findOne({ gameId });
-
-    if (game) {
-      socket.emit('gameState', game.fen);
-    }
+  // Handle new player joining the lobby
+  socket.on('joinLobby', (user) => {
+    onlineUsers.push({ id: socket.id, user });
+    io.emit('updateLobby', onlineUsers);
   });
 
+  // Handle player challenging another player
+  socket.on('challengePlayer', ({ challenger, challengee }) => {
+    io.to(challengee.id).emit('receiveChallenge', { challenger });
+  });
+
+  // Handle player accepting a challenge
+  socket.on('acceptChallenge', ({ challenger, challengee }) => {
+    const gameId = Date.now().toString();
+    const chess = new Chess();
+    const players = Math.random() > 0.5 ? { white: challenger, black: challengee } : { white: challengee, black: challenger };
+    const newGame = new Game({ gameId, fen: chess.fen(), players });
+
+    newGame.save().then(() => {
+      io.to(challenger.id).emit('startGame', { gameId, players });
+      io.to(challengee.id).emit('startGame', { gameId, players });
+    }).catch((err) => {
+      console.error('Error creating new game:', err);
+    });
+  });
+
+  // Handle game moves
   socket.on('makeMove', async ({ gameId, from, to, promotion }) => {
     const game = await Game.findOne({ gameId });
 
@@ -85,12 +79,15 @@ io.on('connection', (socket) => {
           game.updated_at = Date.now();
           await game.save();
 
-          io.to(gameId).emit('gameState', game.fen);
+          io.to(game.players.white.id).emit('gameState', game.fen);
+          io.to(game.players.black.id).emit('gameState', game.fen);
 
           if (chess.isCheckmate()) {
-            io.to(gameId).emit('gameOver', chess.turn() === 'w' ? 'Black wins!' : 'White wins!');
+            io.to(game.players.white.id).emit('gameOver', chess.turn() === 'w' ? 'Black wins!' : 'White wins!');
+            io.to(game.players.black.id).emit('gameOver', chess.turn() === 'w' ? 'Black wins!' : 'White wins!');
           } else if (chess.isStalemate()) {
-            io.to(gameId).emit('gameOver', 'Draw!');
+            io.to(game.players.white.id).emit('gameOver', 'Draw!');
+            io.to(game.players.black.id).emit('gameOver', 'Draw!');
           }
         } else {
           socket.emit('invalidMove', 'Invalid move');
@@ -102,21 +99,11 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('restartGame', async ({ gameId }) => {
-    const game = await Game.findOne({ gameId });
-
-    if (game) {
-      const chess = new Chess();
-      game.fen = chess.fen();
-      game.updated_at = Date.now();
-      await game.save();
-
-      io.to(gameId).emit('gameState', game.fen);
-    }
-  });
-
+  // Handle player disconnecting
   socket.on('disconnect', () => {
     console.log('Client disconnected');
+    onlineUsers = onlineUsers.filter(user => user.id !== socket.id);
+    io.emit('updateLobby', onlineUsers);
   });
 });
 
