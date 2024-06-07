@@ -36,8 +36,11 @@ const initializePieces = (board) => {
       }
     });
   });
+  console.log('Initialized Pieces:', pieces); // Debug log
   return pieces;
 };
+
+
 
 const App = () => {
   const [gameId, setGameId] = useState(null);
@@ -74,20 +77,24 @@ const App = () => {
     }
   }, [socket, gameId, chess]);
 
-  const createGame = async () => {
-    try {
-      const response = await fetch('http://localhost:5000/api/new-game', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      const data = await response.json();
-      setGameId(data.gameId);
-      chess.load(data.fen);
-      setPieces(initializePieces(chess.board()));
-    } catch (error) {
-      console.error('Error creating new game:', error);
-    }
-  };
+const createGame = async () => {
+  try {
+    const response = await fetch('http://localhost:5000/api/new-game', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const data = await response.json();
+    console.log('Game Created:', data); // Debug log
+    setGameId(data.gameId);
+    chess.load(data.fen);
+    const initialPieces = initializePieces(chess.board());
+    setPieces(initialPieces);
+    console.log('Initial Pieces:', initialPieces); // Debug log
+  } catch (error) {
+    console.error('Error creating new game:', error);
+  }
+};
+
 
   useEffect(() => {
     createGame();

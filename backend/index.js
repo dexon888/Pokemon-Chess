@@ -1,5 +1,3 @@
-// backend/index.js
-
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
@@ -25,6 +23,21 @@ app.get('/', (req, res) => {
   res.send('Server is running');
 });
 
+// Route for creating a new game
+app.post('/api/new-game', async (req, res) => {
+  try {
+    const chess = new Chess();
+    const gameId = Date.now().toString();
+    const newGame = new Game({ gameId, fen: chess.fen() });
+    
+    await newGame.save();
+    res.status(201).json({ gameId, fen: chess.fen() });
+  } catch (error) {
+    console.error('Error creating new game:', error);
+    res.status(500).json({ error: 'Failed to create new game' });
+  }
+});
+
 // Connect to MongoDB Atlas
 const dbURI = 'mongodb+srv://Wambink:hello@cluster0.stcst1u.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
 mongoose.connect(dbURI, {
@@ -35,6 +48,7 @@ mongoose.connect(dbURI, {
 
 let onlineUsers = [];
 
+// Socket.io connection
 io.on('connection', (socket) => {
   console.log('New client connected');
 
