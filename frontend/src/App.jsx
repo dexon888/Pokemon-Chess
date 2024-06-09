@@ -1,14 +1,14 @@
-// src/App.jsx
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import Board from './components/Board';
 import { Chess } from 'chess.js';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import Login from './components/Login.jsx';
 import Signup from './components/Signup.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import Lobby from './components/Lobby.jsx';
 import io from 'socket.io-client';
+import axios from 'axios';
 import Logout from './components/Logout.jsx';
 
 const getPokemonForPiece = (piece) => {
@@ -36,11 +36,8 @@ const initializePieces = (board) => {
       }
     });
   });
-  console.log('Initialized Pieces:', pieces); // Debug log
   return pieces;
 };
-
-
 
 const App = () => {
   const [gameId, setGameId] = useState(null);
@@ -48,6 +45,7 @@ const App = () => {
   const [gameOver, setGameOver] = useState(null);
   const [chess, setChess] = useState(new Chess());
   const [socket, setSocket] = useState(null);
+  const [playerColor, setPlayerColor] = useState(null);
 
   useEffect(() => {
     const newSocket = io('http://localhost:5000', {
@@ -60,11 +58,15 @@ const App = () => {
 
   useEffect(() => {
     if (socket && gameId) {
+      console.log('Joining game:', gameId); // Debug log
       socket.emit('joinGame', { gameId });
 
       socket.on('gameState', (fen) => {
+        console.log('Received game state:', fen); // Debug log
         chess.load(fen);
-        setPieces(initializePieces(chess.board()));
+        const updatedPieces = initializePieces(chess.board());
+        setPieces(updatedPieces);
+        console.log('Updated Pieces:', updatedPieces); // Debug log
       });
 
       socket.on('invalidMove', (message) => {
@@ -74,33 +76,39 @@ const App = () => {
       socket.on('gameOver', (message) => {
         setGameOver(message);
       });
+
+      socket.on('playerColor', (color) => {
+        console.log('Assigned color:', color); // Debug log
+        setPlayerColor(color);
+      });
     }
   }, [socket, gameId, chess]);
 
-const createGame = async () => {
-  try {
-    const response = await fetch('http://localhost:5000/api/new-game', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-    });
-    const data = await response.json();
-    console.log('Game Created:', data); // Debug log
-    setGameId(data.gameId);
-    chess.load(data.fen);
-    const initialPieces = initializePieces(chess.board());
-    setPieces(initialPieces);
-    console.log('Initial Pieces:', initialPieces); // Debug log
-  } catch (error) {
-    console.error('Error creating new game:', error);
-  }
-};
-
+  const createGame = async () => {
+    try {
+      const response = await axios.post('http://localhost:5000/api/new-game');
+      console.log('Game Created:', response.data);
+      setGameId(response.data.gameId);
+      chess.load(response.data.fen);
+      const initialPieces = initializePieces(chess.board());
+      setPieces(initialPieces);
+      console.log('Initial Pieces:', initialPieces);
+      console.log('Initial FEN:', response.data.fen);
+    } catch (error) {
+      console.error('Error creating new game:', error);
+    }
+  };
 
   useEffect(() => {
     createGame();
   }, []);
 
-  const movePiece = (fromX, fromY, toX, toY) => {
+  const movePiece = async (fromX, fromY, toX, toY) => {
+    if ((playerColor === 'white' && chess.turn() !== 'w') || (playerColor === 'black' && chess.turn() !== 'b')) {
+      console.log('Not your turn!');
+      return;
+    }
+
     const toAlgebraic = (x, y) => {
       const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
       return `${files[x]}${8 - y}`;
@@ -109,8 +117,19 @@ const createGame = async () => {
     const from = toAlgebraic(fromX, fromY);
     const to = toAlgebraic(toX, toY);
 
-    if (socket) {
-      socket.emit('makeMove', { gameId, from, to });
+    try {
+      const response = await axios.post(`http://localhost:5000/api/move/${gameId}`, { from, to, playerColor }); // Include playerColor
+      chess.load(response.data.fen);
+      setPieces(initializePieces(chess.board()));
+      socket.emit('gameState', response.data.fen); // Emit to update other clients
+
+      if (response.data.gameOver) {
+        setGameOver(response.data.gameOver);
+      }
+    } catch (error) {
+      console.error(`Error during move from ${from} to ${to}:`, error);
+      // Reset the piece to its original position if the move is invalid
+      setPieces(initializePieces(chess.board()));
     }
   };
 
@@ -133,18 +152,62 @@ const createGame = async () => {
         } />
         <Route path="/game/:gameId" element={
           <ProtectedRoute>
-            <div className="App">
-              <h1>Pokémon Chess</h1>
-              <Logout />
-              {gameOver && <h2>{gameOver}</h2>}
-              <Board pieces={pieces} movePiece={movePiece} />
-              <button onClick={restartGame}>Restart Game</button>
-            </div>
+            <GameWrapper chess={chess} socket={socket} gameId={gameId} setGameId={setGameId} pieces={pieces} setPieces={setPieces} gameOver={gameOver} setGameOver={setGameOver} movePiece={movePiece} restartGame={restartGame} playerColor={playerColor} setPlayerColor={setPlayerColor} />
           </ProtectedRoute>
         } />
         <Route path="/" element={<Login />} />
       </Routes>
     </Router>
+  );
+};
+
+const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, gameOver, setGameOver, movePiece, restartGame, playerColor, setPlayerColor }) => {
+  const { gameId: paramGameId } = useParams();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (paramGameId && paramGameId !== gameId) {
+      setGameId(paramGameId);
+    }
+  }, [paramGameId, gameId, setGameId]);
+
+  useEffect(() => {
+    if (socket && gameId) {
+      console.log('Joining game:', gameId); // Debug log
+      socket.emit('joinGame', { gameId });
+
+      socket.on('gameState', (fen) => {
+        console.log('Received game state:', fen); // Debug log
+        chess.load(fen);
+        const updatedPieces = initializePieces(chess.board());
+        setPieces(updatedPieces);
+        console.log('Updated Pieces:', updatedPieces); // Debug log
+      });
+
+      socket.on('invalidMove', (message) => {
+        console.log(message);
+      });
+
+      socket.on('gameOver', (message) => {
+        setGameOver(message);
+      });
+
+      socket.on('playerColor', (color) => {
+        console.log('Assigned color:', color); // Debug log
+        setPlayerColor(color);
+      });
+    }
+  }, [socket, gameId, chess, setPieces, setGameOver, setPlayerColor]);
+
+  return (
+    <div className="App">
+      <h1>Pokémon Chess</h1>
+      <h2>Your color: {playerColor}</h2>
+      <Logout />
+      {gameOver && <h2>{gameOver}</h2>}
+      <Board pieces={pieces} movePiece={movePiece} />
+      <button onClick={restartGame}>Restart Game</button>
+    </div>
   );
 };
 

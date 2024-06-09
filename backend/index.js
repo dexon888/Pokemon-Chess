@@ -1,9 +1,9 @@
+const Chess = require('chess.js').Chess;
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const Chess = require('chess.js').Chess;
 const Game = require('./models/Game');
 
 const app = express();
@@ -23,21 +23,6 @@ app.get('/', (req, res) => {
   res.send('Server is running');
 });
 
-// Route for creating a new game
-app.post('/api/new-game', async (req, res) => {
-  try {
-    const chess = new Chess();
-    const gameId = Date.now().toString();
-    const newGame = new Game({ gameId, fen: chess.fen() });
-    
-    await newGame.save();
-    res.status(201).json({ gameId, fen: chess.fen() });
-  } catch (error) {
-    console.error('Error creating new game:', error);
-    res.status(500).json({ error: 'Failed to create new game' });
-  }
-});
-
 // Connect to MongoDB Atlas
 const dbURI = 'mongodb+srv://Wambink:hello@cluster0.stcst1u.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
 mongoose.connect(dbURI, {
@@ -46,74 +31,132 @@ mongoose.connect(dbURI, {
 }).then(() => console.log('MongoDB connected'))
   .catch(err => console.error('MongoDB connection error:', err));
 
+app.post('/api/new-game', async (req, res) => {
+  try {
+    const chess = new Chess();
+    const gameId = Date.now().toString();
+    const newGame = new Game({
+      gameId,
+      fen: chess.fen(),
+      players: {
+        white: { id: null },
+        black: { id: null },
+      },
+    });
+
+    await newGame.save();
+    res.status(201).json({ gameId, fen: chess.fen() });
+  } catch (error) {
+    console.error('Error creating new game:', error);
+    res.status(500).json({ error: 'Failed to create new game' });
+  }
+});
+
+app.post('/api/move/:gameId', async (req, res) => {
+  const gameId = req.params.gameId;
+  const { from, to, promotion, playerColor } = req.body;
+  const game = await Game.findOne({ gameId });
+
+  console.log(`Move received for game ${gameId} from ${from} to ${to} by ${playerColor}`);
+
+  if (game) {
+    const chess = new Chess();
+    chess.load(game.fen);
+
+    if ((playerColor === 'white' && chess.turn() !== 'w') || (playerColor === 'black' && chess.turn() !== 'b')) {
+      console.log('Not your turn');
+      return res.status(400).json({ error: 'Not your turn' });
+    }
+
+    try {
+      const move = chess.move({ from, to, promotion });
+      if (move) {
+        game.fen = chess.fen();
+        game.updated_at = Date.now();
+        await game.save();
+
+        io.to(game.players.white.id).emit('gameState', game.fen);
+        io.to(game.players.black.id).emit('gameState', game.fen);
+
+        console.log(`Move successful: ${from} to ${to}`);
+        res.json({ fen: game.fen, move });
+      } else {
+        console.log('Invalid move');
+        res.status(400).json({ error: 'Invalid move' });
+      }
+    } catch (error) {
+      console.error(`Invalid move from ${from} to ${to}:`, error);
+      res.status(400).json({ error: 'Invalid move' });
+    }
+  } else {
+    console.log('Game not found');
+    res.status(404).json({ error: 'Game not found' });
+  }
+});
+
 let onlineUsers = [];
 
-// Socket.io connection
 io.on('connection', (socket) => {
   console.log('New client connected');
 
-  // Handle new player joining the lobby
   socket.on('joinLobby', (user) => {
     onlineUsers.push({ id: socket.id, user });
     io.emit('updateLobby', onlineUsers);
   });
 
-  // Handle player challenging another player
   socket.on('challengePlayer', ({ challenger, challengee }) => {
     io.to(challengee.id).emit('receiveChallenge', { challenger });
   });
 
-  // Handle player accepting a challenge
-  socket.on('acceptChallenge', ({ challenger, challengee }) => {
+  socket.on('acceptChallenge', async ({ challenger, challengee }) => {
     const gameId = Date.now().toString();
     const chess = new Chess();
     const players = Math.random() > 0.5 ? { white: challenger, black: challengee } : { white: challengee, black: challenger };
     const newGame = new Game({ gameId, fen: chess.fen(), players });
 
-    newGame.save().then(() => {
+    try {
+      await newGame.save();
       io.to(challenger.id).emit('startGame', { gameId, players });
       io.to(challengee.id).emit('startGame', { gameId, players });
-    }).catch((err) => {
+      console.log(`Game created with players: ${JSON.stringify(players)}`);
+    } catch (err) {
       console.error('Error creating new game:', err);
-    });
-  });
-
-  // Handle game moves
-  socket.on('makeMove', async ({ gameId, from, to, promotion }) => {
-    const game = await Game.findOne({ gameId });
-
-    if (game) {
-      const chess = new Chess();
-      chess.load(game.fen);
-
-      try {
-        const move = chess.move({ from, to, promotion });
-        if (move) {
-          game.fen = chess.fen();
-          game.updated_at = Date.now();
-          await game.save();
-
-          io.to(game.players.white.id).emit('gameState', game.fen);
-          io.to(game.players.black.id).emit('gameState', game.fen);
-
-          if (chess.isCheckmate()) {
-            io.to(game.players.white.id).emit('gameOver', chess.turn() === 'w' ? 'Black wins!' : 'White wins!');
-            io.to(game.players.black.id).emit('gameOver', chess.turn() === 'w' ? 'Black wins!' : 'White wins!');
-          } else if (chess.isStalemate()) {
-            io.to(game.players.white.id).emit('gameOver', 'Draw!');
-            io.to(game.players.black.id).emit('gameOver', 'Draw!');
-          }
-        } else {
-          socket.emit('invalidMove', 'Invalid move');
-        }
-      } catch (error) {
-        console.error(`Invalid move from ${from} to ${to}:`, error);
-        socket.emit('invalidMove', 'Invalid move');
-      }
     }
   });
 
-  // Handle player disconnecting
+  socket.on('joinGame', async ({ gameId }) => {
+    const game = await Game.findOne({ gameId });
+    console.log(`Client ${socket.id} joining game ${gameId}`);
+
+    if (game) {
+      console.log(`Current game players: ${JSON.stringify(game.players)}`);
+      if (!game.players.white.id) {
+        game.players.white.id = socket.id;
+        await game.save();
+        socket.emit('playerColor', 'white');
+        console.log(`Assigned white to ${socket.id}`);
+      } else if (!game.players.black.id) {
+        game.players.black.id = socket.id;
+        await game.save();
+        socket.emit('playerColor', 'black');
+        console.log(`Assigned black to ${socket.id}`);
+      } else {
+        if (socket.id === game.players.white.id) {
+          socket.emit('playerColor', 'white');
+          console.log(`Confirmed white for ${socket.id}`);
+        } else if (socket.id === game.players.black.id) {
+          socket.emit('playerColor', 'black');
+          console.log(`Confirmed black for ${socket.id}`);
+        } else {
+          console.log(`Client ${socket.id} is a spectator`);
+          socket.emit('playerColor', 'spectator');
+        }
+      }
+    } else {
+      console.log(`Game not found for ID: ${gameId}`);
+    }
+  });
+
   socket.on('disconnect', () => {
     console.log('Client disconnected');
     onlineUsers = onlineUsers.filter(user => user.id !== socket.id);
