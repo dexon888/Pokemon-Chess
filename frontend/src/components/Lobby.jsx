@@ -1,9 +1,33 @@
-// src/components/Lobby.jsx
 import React, { useState, useEffect } from 'react';
 import io from 'socket.io-client';
 import { useNavigate } from 'react-router-dom';
+import { Container, TextField, Button, Typography, Box, List, ListItem, ListItemText } from '@mui/material';
+import { styled } from '@mui/system';
 
 const socket = io('http://localhost:5000');
+
+const LobbyContainer = styled(Container)({
+  backgroundColor: '#1d1d1d',
+  padding: '20px',
+  borderRadius: '10px',
+  minHeight: '50vh',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+});
+
+const UsernameInput = styled(TextField)({
+  marginBottom: '20px',
+  backgroundColor: '#333',
+  borderRadius: '5px',
+  input: {
+    color: '#fff',
+  },
+  label: {
+    color: '#fff',
+  },
+});
 
 const Lobby = () => {
   const [users, setUsers] = useState([]);
@@ -47,33 +71,46 @@ const Lobby = () => {
 
   if (!user) {
     return (
-      <div>
-        <h1>Enter your username to join the lobby</h1>
-        <input type="text" onBlur={(e) => handleJoinLobby(e.target.value)} />
-      </div>
+      <LobbyContainer maxWidth="xs">
+        <Typography variant="h4" color="primary" mb={2}>Enter your username to join the lobby</Typography>
+        <UsernameInput
+          variant="outlined"
+          label="Username"
+          fullWidth
+          onBlur={(e) => handleJoinLobby(e.target.value)}
+        />
+      </LobbyContainer>
     );
   }
 
   return (
-    <div>
-      <h1>Welcome to the Lobby, {user.name}</h1>
-      <h2>Online Players:</h2>
-      <ul>
+    <LobbyContainer maxWidth="md">
+      <Typography variant="h4" color="primary" mb={2}>Welcome to the Lobby, {user.name}</Typography>
+      <Typography variant="h5" color="secondary" mb={2}>Online Players:</Typography>
+      <List sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }}>
         {users.map((u) => (
-          <li key={u.id}>
-            {u.name} {u.id !== user.id && <button onClick={() => handleChallengePlayer(u)}>Challenge</button>}
-          </li>
+          <ListItem key={u.id} sx={{ backgroundColor: '#333', borderRadius: '5px', marginBottom: '10px' }}>
+            <ListItemText primary={u.user.name} sx={{ color: '#fff' }} />
+            {u.id !== user.id && (
+              <Button variant="contained" color="primary" onClick={() => handleChallengePlayer(u.user)}>
+                Challenge
+              </Button>
+            )}
+          </ListItem>
         ))}
-      </ul>
-      <h2>Challenges:</h2>
-      <ul>
+      </List>
+      <Typography variant="h5" color="secondary" mt={4} mb={2}>Challenges:</Typography>
+      <List sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }}>
         {challenges.map((challenger, index) => (
-          <li key={index}>
-            {challenger.name} <button onClick={() => handleAcceptChallenge(challenger)}>Accept</button>
-          </li>
+          <ListItem key={index} sx={{ backgroundColor: '#333', borderRadius: '5px', marginBottom: '10px' }}>
+            <ListItemText primary={challenger.name} sx={{ color: '#fff' }} />
+            <Button variant="contained" color="primary" onClick={() => handleAcceptChallenge(challenger)}>
+              Accept
+            </Button>
+          </ListItem>
         ))}
-      </ul>
-    </div>
+      </List>
+    </LobbyContainer>
   );
 };
 
