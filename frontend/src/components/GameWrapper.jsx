@@ -1,35 +1,8 @@
 import React, { useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import Board from './Board';
 import Logout from './Logout';
-
-const getPokemonForPiece = (piece) => {
-  const pokemonMap = {
-    p: 'pikachu',
-    r: 'charizard',
-    n: 'bulbasaur',
-    b: 'squirtle',
-    q: 'mewtwo',
-    k: 'raichu',
-  };
-  return pokemonMap[piece.type] || 'pokeball';
-};
-
-const initializePieces = (board) => {
-  let pieces = {};
-  board.forEach((row, y) => {
-    row.forEach((piece, x) => {
-      if (piece) {
-        pieces[`${x}${y}`] = {
-          type: piece.type,
-          color: piece.color,
-          pokemon: getPokemonForPiece(piece),
-        };
-      }
-    });
-  });
-  return pieces;
-};
+import { initializePieces } from '../App'; // Make sure this import path is correct
 
 const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, gameOver, setGameOver, movePiece, restartGame, playerColor, setPlayerColor }) => {
   const { gameId: paramGameId } = useParams();
@@ -63,31 +36,11 @@ const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, game
       });
 
       socket.on('playerColor', (color) => {
-        if (color !== 'none') {
-          console.log('Assigned color:', color); // Debug log
-          setPlayerColor(color);
-        } else {
-          console.log('Game is full.');
-          alert('This game is already full. You cannot join as a player.');
-          navigate('/lobby');
-        }
+        console.log('Assigned color:', color); // Debug log
+        setPlayerColor(color);
       });
-
-      socket.on('gameFull', ({ message }) => {
-        console.log(message);
-        alert(message);
-        navigate('/lobby');
-      });
-
-      return () => {
-        socket.off('gameState');
-        socket.off('invalidMove');
-        socket.off('gameOver');
-        socket.off('playerColor');
-        socket.off('gameFull');
-      };
     }
-  }, [socket, gameId, chess, setPieces, setGameOver, setPlayerColor, navigate]);
+  }, [socket, gameId, chess, setPieces, setGameOver, setPlayerColor]);
 
   return (
     <div className="App">

@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import './App.css';
 import { Chess } from 'chess.js';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import { ThemeProvider } from '@mui/material/styles';
-import theme from './theme';
 import Login from './components/Login.jsx';
 import Signup from './components/Signup.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
@@ -24,7 +22,7 @@ const getPokemonForPiece = (piece) => {
   return pokemonMap[piece.type] || 'pokeball';
 };
 
-const initializePieces = (board) => {
+export const initializePieces = (board) => {
   let pieces = {};
   board.forEach((row, y) => {
     row.forEach((piece, x) => {
@@ -49,13 +47,17 @@ const App = () => {
   const [playerColor, setPlayerColor] = useState(null);
 
   useEffect(() => {
-    const newSocket = io('http://localhost:5000', {
-      transports: ['websocket', 'polling'],
-    });
-    setSocket(newSocket);
+    if (!socket) {
+      const newSocket = io('http://localhost:5000', {
+        transports: ['websocket', 'polling'],
+      });
+      setSocket(newSocket);
 
-    return () => newSocket.close();
-  }, [setSocket]);
+      return () => {
+        newSocket.close();
+      };
+    }
+  }, [socket]);
 
   const createGame = async () => {
     try {
@@ -113,25 +115,23 @@ const App = () => {
   };
 
   return (
-    <ThemeProvider theme={theme}>
-      <Router>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/lobby" element={
-            <ProtectedRoute>
-              <Lobby />
-            </ProtectedRoute>
-          } />
-          <Route path="/game/:gameId" element={
-            <ProtectedRoute>
-              <GameWrapper chess={chess} socket={socket} gameId={gameId} setGameId={setGameId} pieces={pieces} setPieces={setPieces} gameOver={gameOver} setGameOver={setGameOver} movePiece={movePiece} restartGame={restartGame} playerColor={playerColor} setPlayerColor={setPlayerColor} />
-            </ProtectedRoute>
-          } />
-          <Route path="/" element={<Login />} />
-        </Routes>
-      </Router>
-    </ThemeProvider>
+    <Router>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/lobby" element={
+          <ProtectedRoute>
+            <Lobby />
+          </ProtectedRoute>
+        } />
+        <Route path="/game/:gameId" element={
+          <ProtectedRoute>
+            <GameWrapper chess={chess} socket={socket} gameId={gameId} setGameId={setGameId} pieces={pieces} setPieces={setPieces} gameOver={gameOver} setGameOver={setGameOver} movePiece={movePiece} restartGame={restartGame} playerColor={playerColor} setPlayerColor={setPlayerColor} />
+          </ProtectedRoute>
+        } />
+        <Route path="/" element={<Login />} />
+      </Routes>
+    </Router>
   );
 };
 
