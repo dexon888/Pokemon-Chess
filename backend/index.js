@@ -5,6 +5,7 @@ const socketIo = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const Game = require('./models/Game');
+const { Mutex } = require('async-mutex');
 
 const app = express();
 const server = http.createServer(app);
@@ -95,11 +96,46 @@ app.post('/api/move/:gameId', async (req, res) => {
 });
 
 let onlineUsers = [];
+const gameLocks = new Map(); // Mutex locks for each game
+
+const assignPlayer = async (game, socket) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const updatedGame = await Game.findOne({ gameId: game.gameId }).session(session);
+    if (!updatedGame.players.white.id && socket.id !== updatedGame.players.black.id) {
+      updatedGame.players.white.id = socket.id;
+      await updatedGame.save();
+      await session.commitTransaction();
+      return 'white';
+    } else if (!updatedGame.players.black.id && socket.id !== updatedGame.players.white.id) {
+      updatedGame.players.black.id = socket.id;
+      await updatedGame.save();
+      await session.commitTransaction();
+      return 'black';
+    } else if (socket.id === updatedGame.players.white.id) {
+      await session.commitTransaction();
+      return 'white';
+    } else if (socket.id === updatedGame.players.black.id) {
+      await session.commitTransaction();
+      return 'black';
+    } else {
+      await session.commitTransaction();
+      return 'full';
+    }
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    session.endSession();
+  }
+};
 
 io.on('connection', (socket) => {
-  console.log('New client connected');
+  console.log(`New client connected: ${socket.id}`);
 
   socket.on('joinLobby', (user) => {
+    console.log(`User ${user.name} joined the lobby with socket ID: ${socket.id}`);
     onlineUsers.push({ id: socket.id, user });
     io.emit('updateLobby', onlineUsers);
   });
@@ -125,40 +161,38 @@ io.on('connection', (socket) => {
   });
 
   socket.on('joinGame', async ({ gameId }) => {
-    const game = await Game.findOne({ gameId });
-    console.log(`Client ${socket.id} joining game ${gameId}`);
+    const mutex = gameLocks.get(gameId) || new Mutex();
+    gameLocks.set(gameId, mutex);
 
-    if (game) {
-      console.log(`Current game players: ${JSON.stringify(game.players)}`);
-      if (!game.players.white.id) {
-        game.players.white.id = socket.id;
-        await game.save();
-        socket.emit('playerColor', 'white');
-        console.log(`Assigned white to ${socket.id}`);
-      } else if (!game.players.black.id) {
-        game.players.black.id = socket.id;
-        await game.save();
-        socket.emit('playerColor', 'black');
-        console.log(`Assigned black to ${socket.id}`);
-      } else {
-        if (socket.id === game.players.white.id) {
-          socket.emit('playerColor', 'white');
-          console.log(`Confirmed white for ${socket.id}`);
-        } else if (socket.id === game.players.black.id) {
-          socket.emit('playerColor', 'black');
-          console.log(`Confirmed black for ${socket.id}`);
+    await mutex.runExclusive(async () => {
+      try {
+        const game = await Game.findOne({ gameId });
+        console.log(`Client ${socket.id} joining game ${gameId}`);
+
+        if (game) {
+          console.log(`Current game players: ${JSON.stringify(game.players)}`);
+          let playerColor = await assignPlayer(game, socket);
+
+          if (playerColor === 'white' || playerColor === 'black') {
+            socket.emit('playerColor', playerColor);
+            console.log(`Assigned ${playerColor} to ${socket.id}`);
+          } else {
+            console.log(`Game is full. ${socket.id} cannot join.`);
+            socket.emit('gameFull', { message: 'This game is already full.' });
+          }
         } else {
-          console.log(`Client ${socket.id} is a spectator`);
-          socket.emit('playerColor', 'spectator');
+          console.log(`Game not found for ID: ${gameId}`);
+          socket.emit('playerColor', 'none');
         }
+      } catch (error) {
+        console.error('Error during joinGame:', error);
+        socket.emit('error', { message: 'Error joining game. Please try again.' });
       }
-    } else {
-      console.log(`Game not found for ID: ${gameId}`);
-    }
+    });
   });
 
   socket.on('disconnect', () => {
-    console.log('Client disconnected');
+    console.log(`Client disconnected: ${socket.id}`);
     onlineUsers = onlineUsers.filter(user => user.id !== socket.id);
     io.emit('updateLobby', onlineUsers);
   });

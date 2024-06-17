@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
-import Board from './components/Board';
 import { Chess } from 'chess.js';
-import { BrowserRouter as Router, Route, Routes, useNavigate, useParams } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Login from './components/Login.jsx';
 import Signup from './components/Signup.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import Lobby from './components/Lobby.jsx';
+import GameWrapper from './components/GameWrapper.jsx';
 import io from 'socket.io-client';
 import axios from 'axios';
-import Logout from './components/Logout.jsx';
 
 const getPokemonForPiece = (piece) => {
   const pokemonMap = {
@@ -55,34 +54,6 @@ const App = () => {
 
     return () => newSocket.close();
   }, [setSocket]);
-
-  useEffect(() => {
-    if (socket && gameId) {
-      console.log('Joining game:', gameId); // Debug log
-      socket.emit('joinGame', { gameId });
-
-      socket.on('gameState', (fen) => {
-        console.log('Received game state:', fen); // Debug log
-        chess.load(fen);
-        const updatedPieces = initializePieces(chess.board());
-        setPieces(updatedPieces);
-        console.log('Updated Pieces:', updatedPieces); // Debug log
-      });
-
-      socket.on('invalidMove', (message) => {
-        console.log(message);
-      });
-
-      socket.on('gameOver', (message) => {
-        setGameOver(message);
-      });
-
-      socket.on('playerColor', (color) => {
-        console.log('Assigned color:', color); // Debug log
-        setPlayerColor(color);
-      });
-    }
-  }, [socket, gameId, chess]);
 
   const createGame = async () => {
     try {
@@ -147,7 +118,6 @@ const App = () => {
         <Route path="/lobby" element={
           <ProtectedRoute>
             <Lobby />
-            <Logout />
           </ProtectedRoute>
         } />
         <Route path="/game/:gameId" element={
@@ -158,56 +128,6 @@ const App = () => {
         <Route path="/" element={<Login />} />
       </Routes>
     </Router>
-  );
-};
-
-const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, gameOver, setGameOver, movePiece, restartGame, playerColor, setPlayerColor }) => {
-  const { gameId: paramGameId } = useParams();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (paramGameId && paramGameId !== gameId) {
-      setGameId(paramGameId);
-    }
-  }, [paramGameId, gameId, setGameId]);
-
-  useEffect(() => {
-    if (socket && gameId) {
-      console.log('Joining game:', gameId); // Debug log
-      socket.emit('joinGame', { gameId });
-
-      socket.on('gameState', (fen) => {
-        console.log('Received game state:', fen); // Debug log
-        chess.load(fen);
-        const updatedPieces = initializePieces(chess.board());
-        setPieces(updatedPieces);
-        console.log('Updated Pieces:', updatedPieces); // Debug log
-      });
-
-      socket.on('invalidMove', (message) => {
-        console.log(message);
-      });
-
-      socket.on('gameOver', (message) => {
-        setGameOver(message);
-      });
-
-      socket.on('playerColor', (color) => {
-        console.log('Assigned color:', color); // Debug log
-        setPlayerColor(color);
-      });
-    }
-  }, [socket, gameId, chess, setPieces, setGameOver, setPlayerColor]);
-
-  return (
-    <div className="App">
-      <h1>Pokémon Chess</h1>
-      <h2>Your color: {playerColor}</h2>
-      <Logout />
-      {gameOver && <h2>{gameOver}</h2>}
-      <Board pieces={pieces} movePiece={movePiece} />
-      <button onClick={restartGame}>Restart Game</button>
-    </div>
   );
 };
 
