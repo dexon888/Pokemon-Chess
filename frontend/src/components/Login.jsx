@@ -67,57 +67,59 @@ const Login = () => {
   };
 
   return (
-    <Container maxWidth="xs" sx={{ backgroundColor: '#000', padding: '20px', borderRadius: '10px' }}>
-      <Box textAlign="center" mt={5} position="relative">
-        <Typography variant="h3" color="primary" mb={2}>Pokémon Chess</Typography>
-        {sprites.map((sprite, index) => (
-          <SpriteBox key={index} style={{ top: `${index * 20}%`, left: `${index * 20}%` }}>
-            <img src={sprite} alt="Pokémon" style={{ width: '100%', height: '100%' }} />
-          </SpriteBox>
-        ))}
-        <Typography variant="h4" color="primary">Login</Typography>
-        <form onSubmit={handleLogin}>
-          <TextField
-            fullWidth
-            margin="normal"
-            variant="outlined"
-            label="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            color="secondary"
-            sx={{ backgroundColor: '#333', borderRadius: '5px' }}
-            InputLabelProps={{ style: { color: '#fff' } }}
-            InputProps={{ style: { color: '#fff' } }}
-          />
-          <TextField
-            fullWidth
-            margin="normal"
-            variant="outlined"
-            label="Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            color="secondary"
-            sx={{ backgroundColor: '#333', borderRadius: '5px' }}
-            InputLabelProps={{ style: { color: '#fff' } }}
-            InputProps={{ style: { color: '#fff' } }}
-          />
-          <Button
-            fullWidth
-            variant="contained"
-            color="primary"
-            type="submit"
-            sx={{ mt: 2 }}
-          >
-            Login
-          </Button>
-        </form>
-        {message && <Typography color="error">{message}</Typography>}
-        <Typography mt={2} color="secondary">
-          Don't have an account? <Link to="/signup" style={{ color: '#80d8ff' }}>Sign up</Link>
-        </Typography>
-      </Box>
-    </Container>
+    <Box sx={{ backgroundColor: '#000', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+      {sprites.map((sprite, index) => (
+        <SpriteBox key={index} style={{ top: `${Math.random() * 90}%`, left: `${Math.random() * 90}%` }}>
+          <img src={sprite} alt="Pokémon" style={{ width: '100%', height: '100%' }} />
+        </SpriteBox>
+      ))}
+      <Container maxWidth="xs" sx={{ backgroundColor: '#1d1d1d', padding: '20px', borderRadius: '10px' }}>
+        <Box textAlign="center" mt={5} position="relative">
+          <Typography variant="h3" color="primary" mb={2}>Pokémon Chess</Typography>
+          <Typography variant="h4" color="primary">Login</Typography>
+          <form onSubmit={handleLogin}>
+            <TextField
+              fullWidth
+              margin="normal"
+              variant="outlined"
+              label="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              color="secondary"
+              sx={{ backgroundColor: '#333', borderRadius: '5px' }}
+              InputLabelProps={{ style: { color: '#fff' } }}
+              InputProps={{ style: { color: '#fff' } }}
+            />
+            <TextField
+              fullWidth
+              margin="normal"
+              variant="outlined"
+              label="Password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              color="secondary"
+              sx={{ backgroundColor: '#333', borderRadius: '5px' }}
+              InputLabelProps={{ style: { color: '#fff' } }}
+              InputProps={{ style: { color: '#fff' } }}
+            />
+            <Button
+              fullWidth
+              variant="contained"
+              color="primary"
+              type="submit"
+              sx={{ mt: 2 }}
+            >
+              Login
+            </Button>
+          </form>
+          {message && <Typography color="error">{message}</Typography>}
+          <Typography mt={2} color="secondary">
+            Don't have an account? <Link to="/signup" style={{ color: '#80d8ff' }}>Sign up</Link>
+          </Typography>
+        </Box>
+      </Container>
+    </Box>
   );
 };
 
