@@ -2,6 +2,18 @@ import React from 'react';
 import Square from './Square';
 import Piece from './Piece';
 
+const BoardContainer = {
+  width: '400px',
+  height: '400px',
+  display: 'flex',
+  flexWrap: 'wrap',
+};
+
+const SquareContainer = {
+  width: '12.5%',
+  height: '12.5%',
+};
+
 const Board = ({ pieces, movePiece, playerColor }) => {
   console.log('Board Pieces:', pieces); // Debug log
 
@@ -12,7 +24,7 @@ const Board = ({ pieces, movePiece, playerColor }) => {
     console.log('Rendering Square', i, 'with Piece:', piece); // Debug log
 
     return (
-      <div key={i} style={{ width: '12.5%', height: '12.5%' }}>
+      <div key={i} style={SquareContainer}>
         <Square x={x} y={y}>
           {piece && (
             <Piece
@@ -35,18 +47,7 @@ const Board = ({ pieces, movePiece, playerColor }) => {
     squares.push(renderSquare(i));
   }
 
-  return (
-    <div
-      style={{
-        width: '400px',
-        height: '400px',
-        display: 'flex',
-        flexWrap: 'wrap',
-      }}
-    >
-      {squares}
-    </div>
-  );
+  return <div style={BoardContainer}>{squares}</div>;
 };
 
 export default Board;

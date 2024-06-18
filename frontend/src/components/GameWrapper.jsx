@@ -1,12 +1,59 @@
 import React, { useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import Board from './Board';
 import Logout from './Logout';
-import { initializePieces } from '../App';
+import { Container, Typography, Button, Box } from '@mui/material';
+import { styled } from '@mui/system';
+
+const GameContainer = styled(Container)({
+  backgroundColor: '#1d1d1d',
+  padding: '20px',
+  borderRadius: '10px',
+  minHeight: '80vh',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: '#fff',
+});
+
+const BoardContainer = styled(Box)({
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  margin: '20px 0',
+});
+
+const getPokemonForPiece = (piece) => {
+  const pokemonMap = {
+    p: 'pikachu',
+    r: 'charizard',
+    n: 'bulbasaur',
+    b: 'squirtle',
+    q: 'mewtwo',
+    k: 'raichu',
+  };
+  return pokemonMap[piece.type] || 'pokeball';
+};
+
+const initializePieces = (board) => {
+  let pieces = {};
+  board.forEach((row, y) => {
+    row.forEach((piece, x) => {
+      if (piece) {
+        pieces[`${x}${y}`] = {
+          type: piece.type,
+          color: piece.color,
+          pokemon: getPokemonForPiece(piece),
+        };
+      }
+    });
+  });
+  return pieces;
+};
 
 const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, gameOver, setGameOver, movePiece, restartGame, playerColor, setPlayerColor }) => {
   const { gameId: paramGameId } = useParams();
-  const navigate = useNavigate();
 
   useEffect(() => {
     if (paramGameId && paramGameId !== gameId) {
@@ -16,15 +63,15 @@ const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, game
 
   useEffect(() => {
     if (socket && gameId) {
-      console.log('Joining game:', gameId);
+      console.log('Joining game:', gameId); // Debug log
       socket.emit('joinGame', { gameId });
 
       socket.on('gameState', (fen) => {
-        console.log('Received game state:', fen);
+        console.log('Received game state:', fen); // Debug log
         chess.load(fen);
         const updatedPieces = initializePieces(chess.board());
         setPieces(updatedPieces);
-        console.log('Updated Pieces:', updatedPieces);
+        console.log('Updated Pieces:', updatedPieces); // Debug log
       });
 
       socket.on('invalidMove', (message) => {
@@ -36,21 +83,23 @@ const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, game
       });
 
       socket.on('playerColor', (color) => {
-        console.log('Assigned color:', color);
+        console.log('Assigned color:', color); // Debug log
         setPlayerColor(color);
       });
     }
   }, [socket, gameId, chess, setPieces, setGameOver, setPlayerColor]);
 
   return (
-    <div className="App">
-      <h1>Pokémon Chess</h1>
-      <h2>Your color: {playerColor}</h2>
+    <GameContainer maxWidth="md">
+      <Typography variant="h4">Pokémon Chess</Typography>
+      <Typography variant="h6">Your color: {playerColor}</Typography>
       <Logout />
-      {gameOver && <h2>{gameOver}</h2>}
-      <Board pieces={pieces} movePiece={movePiece} />
-      <button onClick={restartGame}>Restart Game</button>
-    </div>
+      {gameOver && <Typography variant="h6">{gameOver}</Typography>}
+      <BoardContainer>
+        <Board pieces={pieces} movePiece={movePiece} />
+      </BoardContainer>
+      <Button variant="contained" color="primary" onClick={restartGame}>Restart Game</Button>
+    </GameContainer>
   );
 };
 
