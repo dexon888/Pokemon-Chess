@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Board from './Board';
 import Logout from './Logout';
-import { initializePieces } from '../App'; // Make sure this import path is correct
+import { initializePieces } from '../App';
 
 const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, gameOver, setGameOver, movePiece, restartGame, playerColor, setPlayerColor }) => {
   const { gameId: paramGameId } = useParams();
@@ -16,15 +16,15 @@ const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, game
 
   useEffect(() => {
     if (socket && gameId) {
-      console.log('Joining game:', gameId); // Debug log
+      console.log('Joining game:', gameId);
       socket.emit('joinGame', { gameId });
 
       socket.on('gameState', (fen) => {
-        console.log('Received game state:', fen); // Debug log
+        console.log('Received game state:', fen);
         chess.load(fen);
         const updatedPieces = initializePieces(chess.board());
         setPieces(updatedPieces);
-        console.log('Updated Pieces:', updatedPieces); // Debug log
+        console.log('Updated Pieces:', updatedPieces);
       });
 
       socket.on('invalidMove', (message) => {
@@ -36,7 +36,7 @@ const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, game
       });
 
       socket.on('playerColor', (color) => {
-        console.log('Assigned color:', color); // Debug log
+        console.log('Assigned color:', color);
         setPlayerColor(color);
       });
     }

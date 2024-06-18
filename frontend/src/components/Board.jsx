@@ -2,7 +2,7 @@ import React from 'react';
 import Square from './Square';
 import Piece from './Piece';
 
-const Board = ({ pieces, movePiece }) => {
+const Board = ({ pieces, movePiece, playerColor }) => {
   console.log('Board Pieces:', pieces); // Debug log
 
   const renderSquare = (i) => {
@@ -22,6 +22,7 @@ const Board = ({ pieces, movePiece }) => {
               x={x}
               y={y}
               movePiece={movePiece}
+              playerColor={playerColor} // Pass playerColor
             />
           )}
         </Square>

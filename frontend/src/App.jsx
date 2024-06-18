@@ -59,9 +59,9 @@ const App = () => {
     }
   }, [socket]);
 
-  const createGame = async () => {
+  const createGame = async (username) => {
     try {
-      const response = await axios.post('http://localhost:5000/api/new-game');
+      const response = await axios.post('http://localhost:5000/api/new-game', { username });
       console.log('Game Created:', response.data);
       setGameId(response.data.gameId);
       chess.load(response.data.fen);
@@ -93,17 +93,16 @@ const App = () => {
     const to = toAlgebraic(toX, toY);
 
     try {
-      const response = await axios.post(`http://localhost:5000/api/move/${gameId}`, { from, to, playerColor }); // Include playerColor
+      const response = await axios.post(`http://localhost:5000/api/move/${gameId}`, { from, to, playerColor });
       chess.load(response.data.fen);
       setPieces(initializePieces(chess.board()));
-      socket.emit('gameState', response.data.fen); // Emit to update other clients
+      socket.emit('gameState', response.data.fen);
 
       if (response.data.gameOver) {
         setGameOver(response.data.gameOver);
       }
     } catch (error) {
       console.error(`Error during move from ${from} to ${to}:`, error);
-      // Reset the piece to its original position if the move is invalid
       setPieces(initializePieces(chess.board()));
     }
   };
