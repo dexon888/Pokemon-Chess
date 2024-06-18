@@ -1,4 +1,3 @@
-// src/hooks/useAuthState.js
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
 

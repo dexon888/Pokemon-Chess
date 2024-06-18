@@ -52,7 +52,7 @@ const initializePieces = (board) => {
   return pieces;
 };
 
-const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, gameOver, setGameOver, movePiece, restartGame, playerColor, setPlayerColor }) => {
+const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, gameOver, setGameOver, movePiece, restartGame, playerColor, setPlayerColor, username }) => {
   const { gameId: paramGameId } = useParams();
 
   useEffect(() => {
@@ -63,15 +63,13 @@ const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, game
 
   useEffect(() => {
     if (socket && gameId) {
-      console.log('Joining game:', gameId); // Debug log
-      socket.emit('joinGame', { gameId });
+      console.log(`Emitting joinGame event: gameId=${gameId}, username=${username}`); // Debug log
+      socket.emit('joinGame', { gameId, username });
 
       socket.on('gameState', (fen) => {
         console.log('Received game state:', fen); // Debug log
         chess.load(fen);
-        const updatedPieces = initializePieces(chess.board());
-        setPieces(updatedPieces);
-        console.log('Updated Pieces:', updatedPieces); // Debug log
+        setPieces(initializePieces(chess.board()));
       });
 
       socket.on('invalidMove', (message) => {
@@ -86,8 +84,19 @@ const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, game
         console.log('Assigned color:', color); // Debug log
         setPlayerColor(color);
       });
+
+      return () => {
+        socket.off('gameState');
+        socket.off('invalidMove');
+        socket.off('gameOver');
+        socket.off('playerColor');
+      };
     }
-  }, [socket, gameId, chess, setPieces, setGameOver, setPlayerColor]);
+  }, [socket, gameId, chess, setGameOver, setPieces, setPlayerColor, username]);
+
+  useEffect(() => {
+    console.log('playerColor state updated:', playerColor); // Debug log
+  }, [playerColor]);
 
   return (
     <GameContainer maxWidth="md">
@@ -96,7 +105,7 @@ const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, game
       <Logout />
       {gameOver && <Typography variant="h6">{gameOver}</Typography>}
       <BoardContainer>
-        <Board pieces={pieces} movePiece={movePiece} />
+        <Board pieces={pieces} movePiece={movePiece} playerColor={playerColor} />
       </BoardContainer>
       <Button variant="contained" color="primary" onClick={restartGame}>Restart Game</Button>
     </GameContainer>

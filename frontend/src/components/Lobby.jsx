@@ -15,6 +15,7 @@ const LobbyContainer = styled(Container)({
   flexDirection: 'column',
   alignItems: 'center',
   justifyContent: 'center',
+  color: '#fff',
 });
 
 const UsernameInput = styled(TextField)({
@@ -27,6 +28,27 @@ const UsernameInput = styled(TextField)({
   label: {
     color: '#fff',
   },
+});
+
+const StyledList = styled(List)({
+  width: '100%',
+  maxWidth: 360,
+  backgroundColor: '#1d1d1d',
+  padding: 0,
+});
+
+const StyledListItem = styled(ListItem)({
+  backgroundColor: '#333',
+  borderRadius: '5px',
+  marginBottom: '10px',
+  padding: '10px',
+  '&:last-child': {
+    marginBottom: 0,
+  },
+});
+
+const StyledListItemText = styled(ListItemText)({
+  color: '#fff',
 });
 
 const Lobby = () => {
@@ -87,29 +109,29 @@ const Lobby = () => {
     <LobbyContainer maxWidth="md">
       <Typography variant="h4" color="primary" mb={2}>Welcome to the Lobby, {user.name}</Typography>
       <Typography variant="h5" color="secondary" mb={2}>Online Players:</Typography>
-      <List sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }}>
+      <StyledList>
         {users.map((u) => (
-          <ListItem key={u.id} sx={{ backgroundColor: '#333', borderRadius: '5px', marginBottom: '10px' }}>
-            <ListItemText primary={u.user.name} sx={{ color: '#fff' }} />
+          <StyledListItem key={u.id}>
+            <StyledListItemText primary={u.user.name} />
             {u.id !== user.id && (
               <Button variant="contained" color="primary" onClick={() => handleChallengePlayer(u.user)}>
                 Challenge
               </Button>
             )}
-          </ListItem>
+          </StyledListItem>
         ))}
-      </List>
+      </StyledList>
       <Typography variant="h5" color="secondary" mt={4} mb={2}>Challenges:</Typography>
-      <List sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }}>
+      <StyledList>
         {challenges.map((challenger, index) => (
-          <ListItem key={index} sx={{ backgroundColor: '#333', borderRadius: '5px', marginBottom: '10px' }}>
-            <ListItemText primary={challenger.name} sx={{ color: '#fff' }} />
+          <StyledListItem key={index}>
+            <StyledListItemText primary={challenger.name} />
             <Button variant="contained" color="primary" onClick={() => handleAcceptChallenge(challenger)}>
               Accept
             </Button>
-          </ListItem>
+          </StyledListItem>
         ))}
-      </List>
+      </StyledList>
     </LobbyContainer>
   );
 };

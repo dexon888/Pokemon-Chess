@@ -9,6 +9,7 @@ import Lobby from './components/Lobby.jsx';
 import GameWrapper from './components/GameWrapper.jsx';
 import io from 'socket.io-client';
 import axios from 'axios';
+import { useAuthState } from './hooks/useAuthState.js';
 
 const getPokemonForPiece = (piece) => {
   const pokemonMap = {
@@ -46,18 +47,30 @@ const App = () => {
   const [socket, setSocket] = useState(null);
   const [playerColor, setPlayerColor] = useState(null);
 
+  const [user, loading] = useAuthState();
+  const username = user?.username || 'Anonymous';
+
   useEffect(() => {
     if (!socket) {
       const newSocket = io('http://localhost:5000', {
         transports: ['websocket', 'polling'],
       });
       setSocket(newSocket);
-
+  
+      newSocket.on('connect', () => {
+        console.log('Socket connected:', newSocket.id); // Debug log
+      });
+  
+      newSocket.on('disconnect', () => {
+        console.log('Socket disconnected:', newSocket.id); // Debug log
+      });
+  
       return () => {
         newSocket.close();
       };
     }
   }, [socket]);
+  
 
   const createGame = async (username) => {
     try {
@@ -125,7 +138,7 @@ const App = () => {
         } />
         <Route path="/game/:gameId" element={
           <ProtectedRoute>
-            <GameWrapper chess={chess} socket={socket} gameId={gameId} setGameId={setGameId} pieces={pieces} setPieces={setPieces} gameOver={gameOver} setGameOver={setGameOver} movePiece={movePiece} restartGame={restartGame} playerColor={playerColor} setPlayerColor={setPlayerColor} />
+            <GameWrapper chess={chess} socket={socket} gameId={gameId} setGameId={setGameId} pieces={pieces} setPieces={setPieces} gameOver={gameOver} setGameOver={setGameOver} movePiece={movePiece} restartGame={restartGame} playerColor={playerColor} setPlayerColor={setPlayerColor} username={username} />
           </ProtectedRoute>
         } />
         <Route path="/" element={<Login />} />

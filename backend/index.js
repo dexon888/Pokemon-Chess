@@ -137,56 +137,66 @@ io.on('connection', (socket) => {
     io.to(challengee.id).emit('receiveChallenge', { challenger });
   });
 
-  socket.on('acceptChallenge', async ({ challenger, username }) => {
+  socket.on('acceptChallenge', async ({ challenger, challengee }) => {
     const gameId = Date.now().toString();
     const chess = new Chess();
-    const players = Math.random() > 0.5 ? { white: challenger, black: { name: username, id: socket.id } } : { white: { name: username, id: socket.id }, black: challenger };
+    const players = Math.random() > 0.5 ? { white: challenger, black: challengee } : { white: challengee, black: challenger };
     const newGame = new Game({ gameId, fen: chess.fen(), players });
-
+  
     try {
       await newGame.save();
-      io.to(challenger.id).emit('startGame', { gameId, players });
-      io.to(socket.id).emit('startGame', { gameId, players });
+      io.to(challenger.id).emit('startGame', { gameId, color: 'white' });
+      io.to(challengee.id).emit('startGame', { gameId, color: 'black' });
       console.log(`Game created with players: ${JSON.stringify(players)}`);
     } catch (err) {
       console.error('Error creating new game:', err);
     }
   });
+  
 
   socket.on('joinGame', async ({ gameId, username }) => {
-    const game = await Game.findOne({ gameId });
-    console.log(`Client ${socket.id} joining game ${gameId}`);
-
-    if (game) {
-      console.log(`Current game players: ${JSON.stringify(game.players)}`);
-      if (!game.players.white.id) {
-        game.players.white.id = socket.id;
-        game.players.white.name = username || '';
-        await game.save();
-        socket.emit('playerColor', 'white');
-        console.log(`Assigned white to ${socket.id}`);
-      } else if (!game.players.black.id) {
-        game.players.black.id = socket.id;
-        game.players.black.name = username || '';
-        await game.save();
-        socket.emit('playerColor', 'black');
-        console.log(`Assigned black to ${socket.id}`);
-      } else {
-        if (socket.id === game.players.white.id) {
+    console.log(`joinGame event received with gameId: ${gameId} and username: ${username}`); // Debug log
+  
+    try {
+      const game = await Game.findOne({ gameId });
+      console.log('Game found:', game); // Debug log
+  
+      if (game) {
+        if (!game.players.white.id) {
+          game.players.white.id = socket.id;
+          game.players.white.name = username || '';
+          await game.save();
           socket.emit('playerColor', 'white');
-          console.log(`Confirmed white for ${socket.id}`);
-        } else if (socket.id === game.players.black.id) {
+          console.log(`Assigned white to ${socket.id}`);
+        } else if (!game.players.black.id) {
+          game.players.black.id = socket.id;
+          game.players.black.name = username || '';
+          await game.save();
           socket.emit('playerColor', 'black');
-          console.log(`Confirmed black for ${socket.id}`);
+          console.log(`Assigned black to ${socket.id}`);
         } else {
-          console.log(`Client ${socket.id} is a spectator`);
-          socket.emit('playerColor', 'spectator');
+          if (socket.id === game.players.white.id) {
+            socket.emit('playerColor', 'white');
+            console.log(`Confirmed white for ${socket.id}`);
+          } else if (socket.id === game.players.black.id) {
+            socket.emit('playerColor', 'black');
+            console.log(`Confirmed black for ${socket.id}`);
+          } else {
+            socket.emit('playerColor', 'spectator');
+            console.log(`Client ${socket.id} is a spectator`);
+          }
         }
+      } else {
+        console.log(`Game not found for ID: ${gameId}`);
       }
-    } else {
-      console.log(`Game not found for ID: ${gameId}`);
+    } catch (error) {
+      console.error(`Error finding game with ID: ${gameId}`, error);
     }
   });
+  
+  
+  
+  
 
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
