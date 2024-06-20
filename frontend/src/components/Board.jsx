@@ -15,13 +15,11 @@ const SquareContainer = {
 };
 
 const Board = ({ pieces, movePiece, playerColor }) => {
-  console.log('Board Pieces:', pieces); // Debug log
 
   const renderSquare = (i) => {
     const x = i % 8;
     const y = Math.floor(i / 8);
     const piece = pieces[`${x}${y}`];
-    console.log('Rendering Square', i, 'with Piece:', piece); // Debug log
 
     return (
       <div key={i} style={SquareContainer}>

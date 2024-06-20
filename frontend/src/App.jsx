@@ -75,13 +75,10 @@ const App = () => {
   const createGame = async (username) => {
     try {
       const response = await axios.post('http://localhost:5000/api/new-game', { username });
-      console.log('Game Created:', response.data);
       setGameId(response.data.gameId);
       chess.load(response.data.fen);
       const initialPieces = initializePieces(chess.board());
       setPieces(initialPieces);
-      console.log('Initial Pieces:', initialPieces);
-      console.log('Initial FEN:', response.data.fen);
     } catch (error) {
       console.error('Error creating new game:', error);
     }

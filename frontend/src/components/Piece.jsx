@@ -22,7 +22,6 @@ const Piece = ({ type, color, pokemon, x, y, movePiece, playerColor }) => {
 
   useEffect(() => {
     const pieceColor = color === 'w' ? 'white' : 'black';
-    console.log('Chess Piece Path:', `/chess-pieces/${pieceColor}-${type}.png`); // Debug log
     setChessPiece(`/chess-pieces/${pieceColor}-${type}.png`);
   }, [type, color]);
 

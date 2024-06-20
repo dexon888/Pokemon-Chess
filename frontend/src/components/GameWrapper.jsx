@@ -69,14 +69,17 @@ const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, game
       socket.on('gameState', (fen) => {
         console.log('Received game state:', fen); // Debug log
         chess.load(fen);
-        setPieces(initializePieces(chess.board()));
+        const updatedPieces = initializePieces(chess.board());
+        setPieces(updatedPieces);
+        console.log('Updated Pieces:', updatedPieces); // Debug log
       });
 
       socket.on('invalidMove', (message) => {
-        console.log(message);
+        console.log('Received invalidMove:', message); // Debug log
       });
 
       socket.on('gameOver', (message) => {
+        console.log('Received gameOver:', message); // Debug log
         setGameOver(message);
       });
 
@@ -86,6 +89,7 @@ const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, game
       });
 
       return () => {
+        console.log('Cleaning up socket listeners'); // Debug log
         socket.off('gameState');
         socket.off('invalidMove');
         socket.off('gameOver');

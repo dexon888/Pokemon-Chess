@@ -131,6 +131,7 @@ io.on('connection', (socket) => {
   socket.on('joinLobby', (user) => {
     onlineUsers.push({ id: socket.id, user });
     io.emit('updateLobby', onlineUsers);
+    console.log('Updated online users:', onlineUsers); // Debug log
   });
 
   socket.on('challengePlayer', ({ challenger, challengee }) => {
@@ -142,7 +143,7 @@ io.on('connection', (socket) => {
     const chess = new Chess();
     const players = Math.random() > 0.5 ? { white: challenger, black: challengee } : { white: challengee, black: challenger };
     const newGame = new Game({ gameId, fen: chess.fen(), players });
-  
+
     try {
       await newGame.save();
       io.to(challenger.id).emit('startGame', { gameId, color: 'white' });
@@ -152,56 +153,49 @@ io.on('connection', (socket) => {
       console.error('Error creating new game:', err);
     }
   });
-  
 
   socket.on('joinGame', async ({ gameId, username }) => {
     console.log(`joinGame event received with gameId: ${gameId} and username: ${username}`); // Debug log
+    const game = await Game.findOne({ gameId });
+    console.log(`Client ${socket.id} joining game ${gameId}`);
   
-    try {
-      const game = await Game.findOne({ gameId });
-      console.log('Game found:', game); // Debug log
-  
-      if (game) {
-        if (!game.players.white.id) {
-          game.players.white.id = socket.id;
-          game.players.white.name = username || '';
-          await game.save();
-          socket.emit('playerColor', 'white');
-          console.log(`Assigned white to ${socket.id}`);
-        } else if (!game.players.black.id) {
-          game.players.black.id = socket.id;
-          game.players.black.name = username || '';
-          await game.save();
-          socket.emit('playerColor', 'black');
-          console.log(`Assigned black to ${socket.id}`);
-        } else {
-          if (socket.id === game.players.white.id) {
-            socket.emit('playerColor', 'white');
-            console.log(`Confirmed white for ${socket.id}`);
-          } else if (socket.id === game.players.black.id) {
-            socket.emit('playerColor', 'black');
-            console.log(`Confirmed black for ${socket.id}`);
-          } else {
-            socket.emit('playerColor', 'spectator');
-            console.log(`Client ${socket.id} is a spectator`);
-          }
-        }
+    if (game) {
+      console.log(`Current game players before assignment: ${JSON.stringify(game.players)}`);
+      if (!game.players.white.id) {
+        game.players.white.id = socket.id;
+        game.players.white.name = username || '';
+        await game.save();
+        socket.emit('playerColor', 'white');
+        console.log(`Assigned white to ${socket.id}`);
+      } else if (!game.players.black.id) {
+        game.players.black.id = socket.id;
+        game.players.black.name = username || '';
+        await game.save();
+        socket.emit('playerColor', 'black');
+        console.log(`Assigned black to ${socket.id}`);
       } else {
-        console.log(`Game not found for ID: ${gameId}`);
+        if (socket.id === game.players.white.id) {
+          socket.emit('playerColor', 'white');
+          console.log(`Confirmed white for ${socket.id}`);
+        } else if (socket.id === game.players.black.id) {
+          socket.emit('playerColor', 'black');
+          console.log(`Confirmed black for ${socket.id}`);
+        } else {
+          console.log(`Client ${socket.id} is a spectator`);
+          socket.emit('playerColor', 'spectator');
+        }
       }
-    } catch (error) {
-      console.error(`Error finding game with ID: ${gameId}`, error);
+      console.log(`Current game players after assignment: ${JSON.stringify(game.players)}`); // Debug log
+    } else {
+      console.log(`Game not found for ID: ${gameId}`);
     }
   });
-  
-  
-  
-  
 
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
     onlineUsers = onlineUsers.filter(user => user.id !== socket.id);
     io.emit('updateLobby', onlineUsers);
+    console.log('Updated online users after disconnect:', onlineUsers); // Debug log
   });
 });
 
