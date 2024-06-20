@@ -54,36 +54,15 @@ const App = () => {
     if (!socket) {
       const newSocket = io('http://localhost:5000', {
         transports: ['websocket', 'polling'],
-        reconnection: true,
-        reconnectionAttempts: 10,
-        reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000,
       });
       setSocket(newSocket);
 
       newSocket.on('connect', () => {
-        console.log(`[Socket] Connected: ${newSocket.id}`); // Debug log
+        console.log('Socket connected:', newSocket.id); // Debug log
       });
 
-      newSocket.on('disconnect', (reason) => {
-        console.log(`[Socket] Disconnected: ${newSocket.id}, Reason: ${reason}`); // Debug log
-      });
-
-      newSocket.on('connect_error', (error) => {
-        console.error('[Socket] Connection error:', error); // Debug log
-      });
-
-      newSocket.on('reconnect_attempt', () => {
-        console.log('[Socket] Reconnecting attempt...'); // Debug log
-      });
-
-      newSocket.on('reconnect_failed', () => {
-        console.error('[Socket] Reconnection failed'); // Debug log
-      });
-
-      // Listen for the 'close' event to understand why connections are closing
-      newSocket.on('close', (reason) => {
-        console.log(`[Socket] Connection closed: ${newSocket.id}, Reason: ${reason}`);
+      newSocket.on('disconnect', () => {
+        console.log('Socket disconnected:', newSocket.id); // Debug log
       });
 
       return () => {
@@ -100,17 +79,19 @@ const App = () => {
       const initialPieces = initializePieces(chess.board());
       setPieces(initialPieces);
     } catch (error) {
-      console.error('[Game] Error creating new game:', error);
+      console.error('Error creating new game:', error);
     }
   };
 
   useEffect(() => {
-    createGame(username);
+    if (username) {
+      createGame(username);
+    }
   }, [username]);
 
   const movePiece = async (fromX, fromY, toX, toY) => {
     if ((playerColor === 'white' && chess.turn() !== 'w') || (playerColor === 'black' && chess.turn() !== 'b')) {
-      console.log('[Move] Not your turn!');
+      console.log('Not your turn!');
       return;
     }
 
@@ -132,7 +113,7 @@ const App = () => {
         setGameOver(response.data.gameOver);
       }
     } catch (error) {
-      console.error(`[Move] Error during move from ${from} to ${to}:`, error);
+      console.error(`Error during move from ${from} to ${to}:`, error);
       setPieces(initializePieces(chess.board()));
     }
   };
@@ -153,9 +134,22 @@ const App = () => {
             <Lobby />
           </ProtectedRoute>
         } />
-        <Route path="/game/:gameId" element={
+        <Route path="/game/:gameId/:username/:color" element={
           <ProtectedRoute>
-            <GameWrapper chess={chess} socket={socket} gameId={gameId} setGameId={setGameId} pieces={pieces} setPieces={setPieces} gameOver={gameOver} setGameOver={setGameOver} movePiece={movePiece} restartGame={restartGame} playerColor={playerColor} setPlayerColor={setPlayerColor} username={username} />
+            <GameWrapper
+              chess={chess}
+              socket={socket}
+              gameId={gameId}
+              setGameId={setGameId}
+              pieces={pieces}
+              setPieces={setPieces}
+              gameOver={gameOver}
+              setGameOver={setGameOver}
+              movePiece={movePiece}
+              restartGame={restartGame}
+              playerColor={playerColor}
+              setPlayerColor={setPlayerColor}
+            />
           </ProtectedRoute>
         } />
         <Route path="/" element={<Login />} />

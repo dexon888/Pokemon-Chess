@@ -14,6 +14,18 @@ const bounceAnimation = keyframes`
   }
 `;
 
+const glowAnimation = keyframes`
+  0% {
+    box-shadow: 0 0 5px rgba(255, 0, 0, 0.2), 0 0 10px rgba(255, 0, 0, 0.2), 0 0 15px rgba(255, 0, 0, 0.2), 0 0 20px rgba(255, 0, 0, 0.2), 0 0 25px rgba(255, 0, 0, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 10px rgba(255, 0, 0, 0.4), 0 0 20px rgba(255, 0, 0, 0.4), 0 0 30px rgba(255, 0, 0, 0.4), 0 0 40px rgba(255, 0, 0, 0.4), 0 0 50px rgba(255, 0, 0, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(255, 0, 0, 0.2), 0 0 10px rgba(255, 0, 0, 0.2), 0 0 15px rgba(255, 0, 0, 0.2), 0 0 20px rgba(255, 0, 0, 0.2), 0 0 25px rgba(255, 0, 0, 0.2);
+  }
+`;
+
 const rotateAnimation = keyframes`
   0% {
     transform: rotate(0deg);
@@ -23,6 +35,57 @@ const rotateAnimation = keyframes`
   }
 `;
 
+const PokeballButtonContainer = styled(Box)({
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  marginTop: '20px',
+});
+
+const PokeballButton = styled(Button)({
+  background: 'linear-gradient(to bottom, #FF0000 50%, #FFFFFF 50%)',
+  border: '2px solid #000000',
+  borderRadius: '50%',
+  width: '60px',
+  height: '60px',
+  position: 'relative',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  transition: 'transform 0.3s ease-in-out',
+
+  '&:before': {
+    content: '""',
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    width: '20px',
+    height: '20px',
+    backgroundColor: '#FFFFFF',
+    border: '2px solid #000000',
+    borderRadius: '50%',
+    zIndex: 1,
+  },
+
+  '&:hover': {
+    transform: 'rotate(360deg)',
+  }
+});
+
+const Glow = styled(Box)({
+  position: 'absolute',
+  top: '50%',
+  left: '50%',
+  transform: 'translate(-50%, -50%)',
+  width: '10px',
+  height: '10px',
+  borderRadius: '50%',
+  backgroundColor: '#FFFFFF', // Reset to white by default
+  zIndex: 2,
+  animation: 'none', // Disable animation by default
+});
+
 const ChessPieceBox = styled(Box)({
   display: 'flex',
   justifyContent: 'center',
@@ -30,8 +93,8 @@ const ChessPieceBox = styled(Box)({
 });
 
 const PieceContainer = styled(Box)({
-  width: '100px', // Increased size
-  height: '100px', // Increased size
+  width: '100px', 
+  height: '100px', 
   position: 'relative',
   margin: '0 10px',
 });
@@ -42,12 +105,12 @@ const ChessPiece = styled('img')({
 });
 
 const PokemonSprite = styled('img')({
-  width: '70%', // Increased size
-  height: '70%', // Increased size
+  width: '70%', 
+  height: '70%', 
   position: 'absolute',
   top: '15%',
   left: '15%',
-  animation: `${bounceAnimation} 1s ease-in-out infinite`, // Added animation
+  animation: `${bounceAnimation} 1s ease-in-out infinite`, 
 });
 
 const pieceOrder = ['p', 'r', 'n', 'b', 'q', 'k', 'b', 'n', 'r', 'p'];
@@ -108,7 +171,7 @@ const Login = () => {
     } else if (data?.user && !data.user.email_confirmed_at) {
       setMessage('Please verify your email address before logging in.');
     } else if (data?.user) {
-      navigate('/lobby'); // Redirect to the lobby page
+      navigate('/lobby'); 
     } else {
       console.log("Login error");
     }
@@ -146,15 +209,24 @@ const Login = () => {
               InputLabelProps={{ style: { color: '#fff' } }}
               InputProps={{ style: { color: '#fff' } }}
             />
-            <Button
-              fullWidth
-              variant="contained"
-              color="primary"
-              type="submit"
-              sx={{ mt: 2 }}
-            >
-              Login
-            </Button>
+            <PokeballButtonContainer>
+              <PokeballButton
+                fullWidth
+                variant="contained"
+                color="primary"
+                type="submit"
+                onMouseEnter={(e) => {
+                  e.currentTarget.querySelector('.glow').style.animation = `${glowAnimation} 1s infinite`;
+                  e.currentTarget.querySelector('.glow').style.backgroundColor = '#FF0000';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.querySelector('.glow').style.animation = 'none';
+                  e.currentTarget.querySelector('.glow').style.backgroundColor = '#FFFFFF';
+                }}
+              >
+                <Glow className="glow" />
+              </PokeballButton>
+            </PokeballButtonContainer>
           </form>
           {message && <Typography color="error">{message}</Typography>}
           <Typography mt={2} color="secondary">

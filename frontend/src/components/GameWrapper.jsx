@@ -52,19 +52,22 @@ const initializePieces = (board) => {
   return pieces;
 };
 
-const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, gameOver, setGameOver, movePiece, restartGame, playerColor, setPlayerColor, username }) => {
-  const { gameId: paramGameId } = useParams();
+const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, gameOver, setGameOver, movePiece, restartGame, playerColor, setPlayerColor }) => {
+  const { gameId: paramGameId, username: paramUsername, color: paramColor } = useParams();
 
   useEffect(() => {
     if (paramGameId && paramGameId !== gameId) {
       setGameId(paramGameId);
     }
-  }, [paramGameId, gameId, setGameId]);
+    if (paramColor) {
+      setPlayerColor(paramColor);
+    }
+  }, [paramGameId, paramColor, gameId, setGameId, setPlayerColor]);
 
   useEffect(() => {
     if (socket && gameId) {
-      console.log(`Emitting joinGame event: gameId=${gameId}, username=${username}`);
-      socket.emit('joinGame', { gameId, username });
+      console.log(`Emitting joinGame event: gameId=${gameId}, username=${paramUsername}`);
+      socket.emit('joinGame', { gameId, username: paramUsername });
 
       const handleGameState = (fen) => {
         console.log('Received game state:', fen);
@@ -101,7 +104,7 @@ const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, game
         socket.off('playerColor', handlePlayerColor);
       };
     }
-  }, [socket, gameId, chess, setGameOver, setPieces, setPlayerColor, username]);
+  }, [socket, gameId, chess, setGameOver, setPieces, setPlayerColor, paramUsername]);
 
   useEffect(() => {
     console.log('playerColor state updated:', playerColor);
