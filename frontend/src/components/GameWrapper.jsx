@@ -63,43 +63,48 @@ const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, game
 
   useEffect(() => {
     if (socket && gameId) {
-      console.log(`Emitting joinGame event: gameId=${gameId}, username=${username}`); // Debug log
+      console.log(`Emitting joinGame event: gameId=${gameId}, username=${username}`);
       socket.emit('joinGame', { gameId, username });
 
-      socket.on('gameState', (fen) => {
-        console.log('Received game state:', fen); // Debug log
+      const handleGameState = (fen) => {
+        console.log('Received game state:', fen);
         chess.load(fen);
         const updatedPieces = initializePieces(chess.board());
         setPieces(updatedPieces);
-        console.log('Updated Pieces:', updatedPieces); // Debug log
-      });
+        console.log('Updated Pieces:', updatedPieces);
+      };
 
-      socket.on('invalidMove', (message) => {
-        console.log('Received invalidMove:', message); // Debug log
-      });
+      const handleInvalidMove = (message) => {
+        console.log('Received invalidMove:', message);
+      };
 
-      socket.on('gameOver', (message) => {
-        console.log('Received gameOver:', message); // Debug log
+      const handleGameOver = (message) => {
+        console.log('Received gameOver:', message);
         setGameOver(message);
-      });
+      };
 
-      socket.on('playerColor', (color) => {
-        console.log('Assigned color:', color); // Debug log
+      const handlePlayerColor = (color) => {
+        console.log('Assigned color:', color);
         setPlayerColor(color);
-      });
+      };
+
+      socket.on('gameState', handleGameState);
+      socket.on('invalidMove', handleInvalidMove);
+      socket.on('gameOver', handleGameOver);
+      socket.on('playerColor', handlePlayerColor);
 
       return () => {
-        console.log('Cleaning up socket listeners'); // Debug log
-        socket.off('gameState');
-        socket.off('invalidMove');
-        socket.off('gameOver');
-        socket.off('playerColor');
+        console.log('Cleaning up socket listeners');
+        socket.off('gameState', handleGameState);
+        socket.off('invalidMove', handleInvalidMove);
+        socket.off('gameOver', handleGameOver);
+        socket.off('playerColor', handlePlayerColor);
       };
     }
   }, [socket, gameId, chess, setGameOver, setPieces, setPlayerColor, username]);
 
   useEffect(() => {
-    console.log('playerColor state updated:', playerColor); // Debug log
+    console.log('playerColor state updated:', playerColor);
   }, [playerColor]);
 
   return (
