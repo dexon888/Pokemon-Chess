@@ -68,10 +68,10 @@ const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, game
   }, [paramGameId, gameId, setGameId, paramUsername, username, paramColor, playerColor, setPlayerColor]);
 
   useEffect(() => {
-    if (socket && gameId) {
+    if (socket) {
       console.log(`Emitting joinGame event: gameId=${gameId}, username=${username}`);
       socket.emit('joinGame', { gameId, username });
-
+  
       const handleGameState = (fen) => {
         console.log('Received game state:', fen);
         chess.load(fen);
@@ -79,28 +79,36 @@ const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, game
         setPieces(updatedPieces);
         console.log('Updated Pieces:', updatedPieces);
       };
-
+  
+      const handlePlayerColor = (color) => {
+        console.log(`Player color received: ${color}`);
+        setPlayerColor(color);
+      };
+  
       const handleInvalidMove = (message) => {
         console.log('Received invalidMove:', message);
       };
-
+  
       const handleGameOver = (message) => {
         console.log('Received gameOver:', message);
         setGameOver(message);
       };
-
+  
       socket.on('gameState', handleGameState);
+      socket.on('playerColor', handlePlayerColor);
       socket.on('invalidMove', handleInvalidMove);
       socket.on('gameOver', handleGameOver);
-
+  
       return () => {
         console.log('Cleaning up socket listeners');
         socket.off('gameState', handleGameState);
+        socket.off('playerColor', handlePlayerColor);
         socket.off('invalidMove', handleInvalidMove);
         socket.off('gameOver', handleGameOver);
       };
     }
-  }, [socket, gameId, chess, setGameOver, setPieces, setPlayerColor, username]);
+  }, [socket, gameId, chess, setPlayerColor, setGameOver, setPieces, username]);
+  
 
   useEffect(() => {
     console.log('playerColor state updated:', playerColor);

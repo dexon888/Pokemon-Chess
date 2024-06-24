@@ -154,11 +154,11 @@ io.on('connection', (socket) => {
 
   socket.on('joinGame', async ({ gameId, username }) => {
     console.log(`joinGame event received with gameId: ${gameId} and username: ${username}`);
-
+  
     try {
       const game = await Game.findOne({ gameId });
       console.log('Game found:', game);
-
+  
       if (game) {
         if (!game.players.white.id) {
           game.players.white.id = socket.id;
@@ -191,6 +191,7 @@ io.on('connection', (socket) => {
       console.error(`Error finding game with ID: ${gameId}`, error);
     }
   });
+  
 
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);

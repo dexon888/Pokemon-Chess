@@ -90,33 +90,52 @@ const App = () => {
   }, [username]);
 
   const movePiece = async (fromX, fromY, toX, toY) => {
-    if ((playerColor === 'white' && chess.turn() !== 'w') || (playerColor === 'black' && chess.turn() !== 'b')) {
-      console.log('Not your turn!');
-      return;
-    }
+  if ((playerColor === 'white' && chess.turn() !== 'w') || (playerColor === 'black' && chess.turn() !== 'b')) {
+    console.log('Not your turn!');
+    return;
+  }
 
-    const toAlgebraic = (x, y) => {
-      const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-      return `${files[x]}${8 - y}`;
+  const toAlgebraic = (x, y) => {
+    const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+    return `${files[x]}${8 - y}`;
+  };
+
+  const from = toAlgebraic(fromX, fromY);
+  const to = toAlgebraic(toX, toY);
+
+  try {
+    const response = await axios.post(`http://localhost:5000/api/move/${gameId}`, { from, to, playerColor });
+    chess.load(response.data.fen);
+    setPieces(initializePieces(chess.board()));
+    socket.emit('gameState', response.data.fen);
+
+    if (response.data.gameOver) {
+      setGameOver(response.data.gameOver);
+    }
+  } catch (error) {
+    console.error(`Error during move from ${from} to ${to}:`, error);
+    setPieces(initializePieces(chess.board()));
+  }
+};
+
+// Listen for gameState events and update the state
+useEffect(() => {
+  if (socket) {
+    const handleGameState = (fen) => {
+      console.log('Received game state:', fen);
+      chess.load(fen);
+      setPieces(initializePieces(chess.board()));
     };
 
-    const from = toAlgebraic(fromX, fromY);
-    const to = toAlgebraic(toX, toY);
+    socket.on('gameState', handleGameState);
 
-    try {
-      const response = await axios.post(`http://localhost:5000/api/move/${gameId}`, { from, to, playerColor });
-      chess.load(response.data.fen);
-      setPieces(initializePieces(chess.board()));
-      socket.emit('gameState', response.data.fen);
+    return () => {
+      socket.off('gameState', handleGameState);
+    };
+  }
+}, [socket, chess]);
 
-      if (response.data.gameOver) {
-        setGameOver(response.data.gameOver);
-      }
-    } catch (error) {
-      console.error(`Error during move from ${from} to ${to}:`, error);
-      setPieces(initializePieces(chess.board()));
-    }
-  };
+  
 
   const restartGame = () => {
     if (socket) {
