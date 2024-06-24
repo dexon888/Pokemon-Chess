@@ -44,8 +44,8 @@ const Lobby = () => {
       setChallenges((prev) => [...prev, challenger]);
     });
 
-    socket.on('startGame', ({ gameId, players }) => {
-      navigate(`/game/${gameId}`, { state: { players } });
+    socket.on('startGame', ({ gameId, color, players }) => {
+      navigate(`/game/${gameId}/${players[color].name}/${color}`);
     });
 
     return () => {

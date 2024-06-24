@@ -130,12 +130,10 @@ io.on('connection', (socket) => {
   socket.on('joinLobby', (user) => {
     onlineUsers.push({ id: socket.id, user });
     io.emit('updateLobby', onlineUsers);
-    console.log('Updated online users:', onlineUsers);
   });
 
   socket.on('challengePlayer', ({ challenger, challengee }) => {
     io.to(challengee.id).emit('receiveChallenge', { challenger });
-    console.log(`Challenge from ${challenger} to ${challengee}`);
   });
 
   socket.on('acceptChallenge', async ({ challenger, challengee }) => {
@@ -146,8 +144,8 @@ io.on('connection', (socket) => {
 
     try {
       await newGame.save();
-      io.to(challenger.id).emit('startGame', { gameId, color: 'white' });
-      io.to(challengee.id).emit('startGame', { gameId, color: 'black' });
+      io.to(challenger.id).emit('startGame', { gameId, players, color: 'white' });
+      io.to(challengee.id).emit('startGame', { gameId, players, color: 'black' });
       console.log(`Game created with players: ${JSON.stringify(players)}`);
     } catch (err) {
       console.error('Error creating new game:', err);
@@ -155,11 +153,11 @@ io.on('connection', (socket) => {
   });
 
   socket.on('joinGame', async ({ gameId, username }) => {
-    console.log(`joinGame event received with gameId: ${gameId} and username: ${username}`); // Debug log
+    console.log(`joinGame event received with gameId: ${gameId} and username: ${username}`);
 
     try {
       const game = await Game.findOne({ gameId });
-      console.log('Game found:', game); // Debug log
+      console.log('Game found:', game);
 
       if (game) {
         if (!game.players.white.id) {
@@ -203,3 +201,4 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
