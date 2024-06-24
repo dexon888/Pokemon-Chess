@@ -67,7 +67,11 @@ const Lobby = () => {
 
   const handleAcceptChallenge = (challenger) => {
     socket.emit('acceptChallenge', { challenger, challengee: user });
+    socket.on('startGame', ({ gameId, players, color }) => {
+      navigate(`/game/${gameId}/${user.name}/${color}`);
+    });
   };
+  
 
   if (!user) {
     return (

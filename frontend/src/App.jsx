@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import { Chess } from 'chess.js';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import Login from './components/Login.jsx';
 import Signup from './components/Signup.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
@@ -133,7 +133,7 @@ const App = () => {
           <Lobby />
         </ProtectedRoute>
       } />
-      <Route path="/game/:gameId/:username/:playerColor" element={
+      <Route path="/game/:gameId/:username/:color" element={
         <ProtectedRoute>
           <GameWrapper
             chess={chess}

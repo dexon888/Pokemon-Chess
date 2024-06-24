@@ -53,13 +53,19 @@ const initializePieces = (board) => {
 };
 
 const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, gameOver, setGameOver, movePiece, restartGame, playerColor, setPlayerColor, username }) => {
-  const { gameId: paramGameId } = useParams();
+  const { gameId: paramGameId, username: paramUsername, color: paramColor } = useParams();
 
   useEffect(() => {
     if (paramGameId && paramGameId !== gameId) {
       setGameId(paramGameId);
     }
-  }, [paramGameId, gameId, setGameId]);
+    if (paramUsername && paramUsername !== username) {
+      username = paramUsername;
+    }
+    if (paramColor && paramColor !== playerColor) {
+      setPlayerColor(paramColor);
+    }
+  }, [paramGameId, gameId, setGameId, paramUsername, username, paramColor, playerColor, setPlayerColor]);
 
   useEffect(() => {
     if (socket && gameId) {
@@ -83,22 +89,15 @@ const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, game
         setGameOver(message);
       };
 
-      const handlePlayerColor = (color) => {
-        console.log('Assigned color:', color);
-        setPlayerColor(color);
-      };
-
       socket.on('gameState', handleGameState);
       socket.on('invalidMove', handleInvalidMove);
       socket.on('gameOver', handleGameOver);
-      socket.on('playerColor', handlePlayerColor);
 
       return () => {
         console.log('Cleaning up socket listeners');
         socket.off('gameState', handleGameState);
         socket.off('invalidMove', handleInvalidMove);
         socket.off('gameOver', handleGameOver);
-        socket.off('playerColor', handlePlayerColor);
       };
     }
   }, [socket, gameId, chess, setGameOver, setPieces, setPlayerColor, username]);
