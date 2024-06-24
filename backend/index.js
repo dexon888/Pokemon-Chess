@@ -103,10 +103,13 @@ app.post('/api/move/:gameId', async (req, res) => {
         game.updated_at = Date.now();
         await game.save();
 
+        // Emit game state to both players
         io.to(game.players.white.id).emit('gameState', game.fen);
         io.to(game.players.black.id).emit('gameState', game.fen);
 
         console.log(`Move successful: ${from} to ${to}`);
+        console.log(`Emitting gameState to white: ${game.players.white.id}, black: ${game.players.black.id}`);
+
         res.json({ fen: game.fen, move });
       } else {
         console.log('Invalid move');
@@ -121,6 +124,7 @@ app.post('/api/move/:gameId', async (req, res) => {
     res.status(404).json({ error: 'Game not found' });
   }
 });
+
 
 let onlineUsers = [];
 

@@ -121,10 +121,15 @@ const App = () => {
 // Listen for gameState events and update the state
 useEffect(() => {
   if (socket) {
+    console.log(`Emitting joinGame event: gameId=${gameId}, username=${username}`);
+    socket.emit('joinGame', { gameId, username });
+
     const handleGameState = (fen) => {
       console.log('Received game state:', fen);
       chess.load(fen);
-      setPieces(initializePieces(chess.board()));
+      const updatedPieces = initializePieces(chess.board());
+      setPieces(updatedPieces);
+      console.log('Updated Pieces:', updatedPieces);
     };
 
     socket.on('gameState', handleGameState);
@@ -133,7 +138,8 @@ useEffect(() => {
       socket.off('gameState', handleGameState);
     };
   }
-}, [socket, chess]);
+}, [socket, gameId, chess, setPieces, username]);
+
 
   
 
