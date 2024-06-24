@@ -26,12 +26,21 @@ const glowAnimation = keyframes`
   }
 `;
 
-const rotateAnimation = keyframes`
+const expandAnimation = keyframes`
   0% {
-    transform: rotate(0deg);
+    transform: scale(1);
   }
   100% {
-    transform: rotate(360deg);
+    transform: scale(1.1);
+  }
+`;
+
+const contractAnimation = keyframes`
+  0% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
   }
 `;
 
@@ -179,10 +188,29 @@ const Login = () => {
 
   return (
     <Box sx={{ backgroundColor: '#000', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', flexDirection: 'column' }}>
-      <Container maxWidth="xs" sx={{ backgroundColor: '#1d1d1d', padding: '20px', borderRadius: '10px', mb: 4 }}>
+      <Container
+        maxWidth="xs"
+        sx={{
+          backgroundColor: '#1d1d1d',
+          padding: '20px',
+          borderRadius: '10px',
+          mb: 4,
+          transition: 'transform 0.3s ease-in-out',
+          '&:hover': {
+            animation: `${expandAnimation} 0.3s forwards`,
+          },
+          '&:not(:hover)': {
+            animation: `${contractAnimation} 0.3s forwards`,
+          },
+        }}
+      >
         <Box textAlign="center" mt={5} position="relative">
-          <Typography variant="h3" color="primary" mb={2}>Pokémon Chess</Typography>
-          <Typography variant="h4" color="primary">Login</Typography>
+          <Typography variant="h3" sx={{ color: '#ffcb05', textShadow: '2px 2px 4px #3b4cca', fontWeight: 'bold' }} mb={2}>
+            Pokémon Chess
+          </Typography>
+          <Typography variant="h4" sx={{ color: '#ffcb05', textShadow: '2px 2px 4px #3b4cca', fontWeight: 'bold' }}>
+            Login
+          </Typography>
           <form onSubmit={handleLogin}>
             <TextField
               fullWidth

@@ -130,10 +130,12 @@ io.on('connection', (socket) => {
   socket.on('joinLobby', (user) => {
     onlineUsers.push({ id: socket.id, user });
     io.emit('updateLobby', onlineUsers);
+    console.log('Updated online users:', onlineUsers);
   });
 
   socket.on('challengePlayer', ({ challenger, challengee }) => {
     io.to(challengee.id).emit('receiveChallenge', { challenger });
+    console.log(`Challenge from ${challenger} to ${challengee}`);
   });
 
   socket.on('acceptChallenge', async ({ challenger, challengee }) => {
