@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import Board from './Board';
 import Logout from './Logout';
 import { Container, Typography, Button, Box } from '@mui/material';
 import { styled } from '@mui/system';
+import { initializePieces } from '../utils'; // Import initializePieces
 
 const GameContainer = styled(Container)({
   backgroundColor: '#1d1d1d',
@@ -24,36 +25,9 @@ const BoardContainer = styled(Box)({
   margin: '20px 0',
 });
 
-const getPokemonForPiece = (piece) => {
-  const pokemonMap = {
-    p: 'pikachu',
-    r: 'charizard',
-    n: 'bulbasaur',
-    b: 'squirtle',
-    q: 'mewtwo',
-    k: 'raichu',
-  };
-  return pokemonMap[piece.type] || 'pokeball';
-};
-
-const initializePieces = (board) => {
-  let pieces = {};
-  board.forEach((row, y) => {
-    row.forEach((piece, x) => {
-      if (piece) {
-        pieces[`${x}${y}`] = {
-          type: piece.type,
-          color: piece.color,
-          pokemon: getPokemonForPiece(piece),
-        };
-      }
-    });
-  });
-  return pieces;
-};
-
 const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, gameOver, setGameOver, movePiece, restartGame, playerColor, setPlayerColor, turn, setTurn, username }) => {
   const { gameId: paramGameId, username: paramUsername, color: paramColor } = useParams();
+  const isFirstRender = useRef(true); // Track if it's the first render
 
   useEffect(() => {
     if (paramGameId && paramGameId !== gameId) {
@@ -68,9 +42,10 @@ const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, game
   }, [paramGameId, gameId, setGameId, paramUsername, username, paramColor, playerColor, setPlayerColor]);
 
   useEffect(() => {
-    if (socket) {
+    if (socket && isFirstRender.current) {
       console.log(`Emitting joinGame event: gameId=${gameId}, username=${username}`);
       socket.emit('joinGame', { gameId, username });
+      isFirstRender.current = false; // Prevent further emissions
 
       const handleGameState = ({ fen, turn, move }) => {
         console.log('Received game state:', { fen, turn, move });
