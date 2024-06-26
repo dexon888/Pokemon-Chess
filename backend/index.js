@@ -196,6 +196,10 @@ io.on('connection', (socket) => {
       console.error(`Error finding game with ID: ${gameId}`, error);
     }
   });
+
+  socket.on('testEvent', (data) => {
+    console.log('Test event received:', data);
+  });
   
 
   socket.on('disconnect', () => {

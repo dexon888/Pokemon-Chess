@@ -1,10 +1,10 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import Board from './Board';
 import Logout from './Logout';
 import { Container, Typography, Button, Box } from '@mui/material';
 import { styled } from '@mui/system';
-import { initializePieces } from '../utils'; // Import initializePieces
+import { initializePieces } from '../utils'; // Make sure this import is correct
 
 const GameContainer = styled(Container)({
   backgroundColor: '#1d1d1d',
@@ -27,7 +27,6 @@ const BoardContainer = styled(Box)({
 
 const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, gameOver, setGameOver, movePiece, restartGame, playerColor, setPlayerColor, turn, setTurn, username }) => {
   const { gameId: paramGameId, username: paramUsername, color: paramColor } = useParams();
-  const isFirstRender = useRef(true); // Track if it's the first render
 
   useEffect(() => {
     if (paramGameId && paramGameId !== gameId) {
@@ -42,10 +41,10 @@ const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, game
   }, [paramGameId, gameId, setGameId, paramUsername, username, paramColor, playerColor, setPlayerColor]);
 
   useEffect(() => {
-    if (socket && isFirstRender.current) {
-      console.log(`Emitting joinGame event: gameId=${gameId}, username=${username}`);
+    if (socket) {
+      console.log(`Setting up socket listeners for gameId=${gameId}, username=${username}`);
+      
       socket.emit('joinGame', { gameId, username });
-      isFirstRender.current = false; // Prevent further emissions
 
       const handleGameState = ({ fen, turn, move }) => {
         console.log('Received game state:', { fen, turn, move });
@@ -90,6 +89,11 @@ const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, game
     console.log('playerColor state updated:', playerColor);
   }, [playerColor]);
 
+  const emitTestEvent = () => {
+    console.log('Emitting test event');
+    socket.emit('testEvent', { message: 'Test event emitted' });
+  };
+
   return (
     <GameContainer maxWidth="md">
       <Typography variant="h4">Pokémon Chess</Typography>
@@ -101,6 +105,7 @@ const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, game
         <Board pieces={pieces} movePiece={movePiece} playerColor={playerColor} />
       </BoardContainer>
       <Button variant="contained" color="primary" onClick={restartGame}>Restart Game</Button>
+      <Button variant="contained" color="secondary" onClick={emitTestEvent}>Emit Test Event</Button>
     </GameContainer>
   );
 };
