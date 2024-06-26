@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import './App.css';
-import { Chess } from 'chess.js';
 import { Route, Routes } from 'react-router-dom';
 import Login from './components/Login.jsx';
 import Signup from './components/Signup.jsx';
@@ -10,6 +8,8 @@ import GameWrapper from './components/GameWrapper.jsx';
 import io from 'socket.io-client';
 import axios from 'axios';
 import { useAuthState } from './hooks/useAuthState.js';
+import { Chess } from 'chess.js';  // Ensure Chess is imported correctly
+import './App.css';
 
 const getPokemonForPiece = (piece) => {
   const pokemonMap = {
@@ -46,7 +46,7 @@ const App = () => {
   const [chess, setChess] = useState(new Chess());
   const [socket, setSocket] = useState(null);
   const [playerColor, setPlayerColor] = useState(null);
-  const [turn, setTurn] = useState('w'); // 'w' for white and 'b' for black
+  const [turn, setTurn] = useState('w');
 
   const [user, loading] = useAuthState();
   const username = user?.username || 'Anonymous';
@@ -59,11 +59,11 @@ const App = () => {
       setSocket(newSocket);
 
       newSocket.on('connect', () => {
-        console.log('Socket connected:', newSocket.id); // Debug log
+        console.log('Socket connected:', newSocket.id);
       });
 
       newSocket.on('disconnect', () => {
-        console.log('Socket disconnected:', newSocket.id); // Debug log
+        console.log('Socket disconnected:', newSocket.id);
       });
 
       return () => {
@@ -107,34 +107,15 @@ const App = () => {
     try {
       const response = await axios.post(`http://localhost:5000/api/move/${gameId}`, { from, to, playerColor });
       chess.load(response.data.fen);
+      setTurn(response.data.turn);
       setPieces(initializePieces(chess.board()));
-      socket.emit('gameState', { fen: response.data.fen, turn: chess.turn(), move: response.data.move });
-
       if (response.data.gameOver) {
         setGameOver(response.data.gameOver);
       }
     } catch (error) {
       console.error(`Error during move from ${from} to ${to}:`, error);
-      setPieces(initializePieces(chess.board()));
     }
   };
-
-  useEffect(() => {
-    if (socket) {
-      const handleGameState = ({ fen, turn, move }) => {
-        console.log('Received game state:', { fen, turn, move });
-        chess.load(fen);
-        setTurn(turn);
-        setPieces(initializePieces(chess.board()));
-      };
-
-      socket.on('gameState', handleGameState);
-
-      return () => {
-        socket.off('gameState', handleGameState);
-      };
-    }
-  }, [socket, chess]);
 
   const restartGame = () => {
     if (socket) {
@@ -163,12 +144,12 @@ const App = () => {
             gameOver={gameOver}
             setGameOver={setGameOver}
             movePiece={movePiece}
-            restartGame={restartGame}
+            restartGame={restartGame}  // Pass restartGame as a prop
             playerColor={playerColor}
             setPlayerColor={setPlayerColor}
+            turn={turn}
+            setTurn={setTurn}
             username={username}
-            turn={turn} // Pass down turn
-            setTurn={setTurn} // Pass down setTurn
           />
         </ProtectedRoute>
       } />

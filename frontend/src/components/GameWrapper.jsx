@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import Board from './Board';
 import Logout from './Logout';
@@ -52,7 +52,7 @@ const initializePieces = (board) => {
   return pieces;
 };
 
-const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, gameOver, setGameOver, movePiece, restartGame, playerColor, setPlayerColor, username, turn, setTurn }) => {
+const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, gameOver, setGameOver, movePiece, restartGame, playerColor, setPlayerColor, turn, setTurn, username }) => {
   const { gameId: paramGameId, username: paramUsername, color: paramColor } = useParams();
 
   useEffect(() => {
@@ -71,7 +71,7 @@ const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, game
     if (socket) {
       console.log(`Emitting joinGame event: gameId=${gameId}, username=${username}`);
       socket.emit('joinGame', { gameId, username });
-  
+
       const handleGameState = ({ fen, turn, move }) => {
         console.log('Received game state:', { fen, turn, move });
         chess.load(fen);
@@ -81,26 +81,26 @@ const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, game
         console.log('Updated Pieces:', updatedPieces);
         console.log('Updated Turn:', turn);
       };
-  
+
       const handlePlayerColor = (color) => {
         console.log(`Player color received: ${color}`);
         setPlayerColor(color);
       };
-  
+
       const handleInvalidMove = (message) => {
         console.log('Received invalidMove:', message);
       };
-  
+
       const handleGameOver = (message) => {
         console.log('Received gameOver:', message);
         setGameOver(message);
       };
-  
+
       socket.on('gameState', handleGameState);
       socket.on('playerColor', handlePlayerColor);
       socket.on('invalidMove', handleInvalidMove);
       socket.on('gameOver', handleGameOver);
-  
+
       return () => {
         console.log('Cleaning up socket listeners');
         socket.off('gameState', handleGameState);
