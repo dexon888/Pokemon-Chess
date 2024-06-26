@@ -46,6 +46,7 @@ const App = () => {
   const [chess, setChess] = useState(new Chess());
   const [socket, setSocket] = useState(null);
   const [playerColor, setPlayerColor] = useState(null);
+  const [turn, setTurn] = useState('w'); // 'w' for white and 'b' for black
 
   const [user, loading] = useAuthState();
   const username = user?.username || 'Anonymous';
@@ -90,58 +91,50 @@ const App = () => {
   }, [username]);
 
   const movePiece = async (fromX, fromY, toX, toY) => {
-  if ((playerColor === 'white' && chess.turn() !== 'w') || (playerColor === 'black' && chess.turn() !== 'b')) {
-    console.log('Not your turn!');
-    return;
-  }
+    if ((playerColor === 'white' && chess.turn() !== 'w') || (playerColor === 'black' && chess.turn() !== 'b')) {
+      console.log('Not your turn!');
+      return;
+    }
 
-  const toAlgebraic = (x, y) => {
-    const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-    return `${files[x]}${8 - y}`;
+    const toAlgebraic = (x, y) => {
+      const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+      return `${files[x]}${8 - y}`;
+    };
+
+    const from = toAlgebraic(fromX, fromY);
+    const to = toAlgebraic(toX, toY);
+
+    try {
+      const response = await axios.post(`http://localhost:5000/api/move/${gameId}`, { from, to, playerColor });
+      chess.load(response.data.fen);
+      setPieces(initializePieces(chess.board()));
+      socket.emit('gameState', { fen: response.data.fen, turn: chess.turn(), move: response.data.move });
+
+      if (response.data.gameOver) {
+        setGameOver(response.data.gameOver);
+      }
+    } catch (error) {
+      console.error(`Error during move from ${from} to ${to}:`, error);
+      setPieces(initializePieces(chess.board()));
+    }
   };
 
-  const from = toAlgebraic(fromX, fromY);
-  const to = toAlgebraic(toX, toY);
+  useEffect(() => {
+    if (socket) {
+      const handleGameState = ({ fen, turn, move }) => {
+        console.log('Received game state:', { fen, turn, move });
+        chess.load(fen);
+        setTurn(turn);
+        setPieces(initializePieces(chess.board()));
+      };
 
-  try {
-    const response = await axios.post(`http://localhost:5000/api/move/${gameId}`, { from, to, playerColor });
-    chess.load(response.data.fen);
-    setPieces(initializePieces(chess.board()));
-    socket.emit('gameState', response.data.fen);
+      socket.on('gameState', handleGameState);
 
-    if (response.data.gameOver) {
-      setGameOver(response.data.gameOver);
+      return () => {
+        socket.off('gameState', handleGameState);
+      };
     }
-  } catch (error) {
-    console.error(`Error during move from ${from} to ${to}:`, error);
-    setPieces(initializePieces(chess.board()));
-  }
-};
-
-// Listen for gameState events and update the state
-useEffect(() => {
-  if (socket) {
-    console.log(`Emitting joinGame event: gameId=${gameId}, username=${username}`);
-    socket.emit('joinGame', { gameId, username });
-
-    const handleGameState = (fen) => {
-      console.log('Received game state:', fen);
-      chess.load(fen);
-      const updatedPieces = initializePieces(chess.board());
-      setPieces(updatedPieces);
-      console.log('Updated Pieces:', updatedPieces);
-    };
-
-    socket.on('gameState', handleGameState);
-
-    return () => {
-      socket.off('gameState', handleGameState);
-    };
-  }
-}, [socket, gameId, chess, setPieces, username]);
-
-
-  
+  }, [socket, chess]);
 
   const restartGame = () => {
     if (socket) {
@@ -174,6 +167,8 @@ useEffect(() => {
             playerColor={playerColor}
             setPlayerColor={setPlayerColor}
             username={username}
+            turn={turn} // Pass down turn
+            setTurn={setTurn} // Pass down setTurn
           />
         </ProtectedRoute>
       } />

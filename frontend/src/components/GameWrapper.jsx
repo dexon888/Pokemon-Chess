@@ -52,7 +52,7 @@ const initializePieces = (board) => {
   return pieces;
 };
 
-const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, gameOver, setGameOver, movePiece, restartGame, playerColor, setPlayerColor, username }) => {
+const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, gameOver, setGameOver, movePiece, restartGame, playerColor, setPlayerColor, username, turn, setTurn }) => {
   const { gameId: paramGameId, username: paramUsername, color: paramColor } = useParams();
 
   useEffect(() => {
@@ -72,12 +72,14 @@ const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, game
       console.log(`Emitting joinGame event: gameId=${gameId}, username=${username}`);
       socket.emit('joinGame', { gameId, username });
   
-      const handleGameState = (fen) => {
-        console.log('Received game state:', fen);
+      const handleGameState = ({ fen, turn, move }) => {
+        console.log('Received game state:', { fen, turn, move });
         chess.load(fen);
+        setTurn(turn);
         const updatedPieces = initializePieces(chess.board());
         setPieces(updatedPieces);
         console.log('Updated Pieces:', updatedPieces);
+        console.log('Updated Turn:', turn);
       };
   
       const handlePlayerColor = (color) => {
@@ -107,8 +109,7 @@ const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, game
         socket.off('gameOver', handleGameOver);
       };
     }
-  }, [socket, gameId, chess, setPlayerColor, setGameOver, setPieces, username]);
-  
+  }, [socket, gameId, chess, setPlayerColor, setGameOver, setPieces, username, setTurn]);
 
   useEffect(() => {
     console.log('playerColor state updated:', playerColor);
@@ -118,6 +119,7 @@ const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, game
     <GameContainer maxWidth="md">
       <Typography variant="h4">Pokémon Chess</Typography>
       <Typography variant="h6">Your color: {playerColor}</Typography>
+      <Typography variant="h6">Current turn: {turn === 'w' ? 'White' : 'Black'}</Typography>
       <Logout />
       {gameOver && <Typography variant="h6">{gameOver}</Typography>}
       <BoardContainer>

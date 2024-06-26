@@ -104,11 +104,11 @@ app.post('/api/move/:gameId', async (req, res) => {
         await game.save();
 
         // Emit game state to both players
-        io.to(game.players.white.id).emit('gameState', game.fen);
-        io.to(game.players.black.id).emit('gameState', game.fen);
+        io.to(game.players.white.id).emit('gameState', { fen: game.fen, turn: chess.turn(), move });
+        io.to(game.players.black.id).emit('gameState', { fen: game.fen, turn: chess.turn(), move });
 
         console.log(`Move successful: ${from} to ${to}`);
-        console.log(`Emitting gameState to white: ${game.players.white.id}, black: ${game.players.black.id}`);
+        console.log(`Emitting gameState to white: ${game.players.white.id}, black: ${game.players.black.id} with FEN: ${game.fen} and turn: ${chess.turn()}`);
 
         res.json({ fen: game.fen, move });
       } else {
@@ -124,6 +124,7 @@ app.post('/api/move/:gameId', async (req, res) => {
     res.status(404).json({ error: 'Game not found' });
   }
 });
+
 
 
 let onlineUsers = [];
@@ -206,4 +207,3 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
