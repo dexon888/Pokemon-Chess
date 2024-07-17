@@ -3,7 +3,7 @@ import { useDrag } from 'react-dnd';
 import { ItemTypes } from '../constants';
 import axios from 'axios';
 
-const Piece = ({ type, color, pokemon, x, y, movePiece, playerColor }) => {
+const Piece = ({ type, color, pokemon, x, y, movePiece }) => {
   const [sprite, setSprite] = useState('');
   const [chessPiece, setChessPiece] = useState('');
 
@@ -21,7 +21,7 @@ const Piece = ({ type, color, pokemon, x, y, movePiece, playerColor }) => {
   }, [pokemon]);
 
   useEffect(() => {
-    const pieceColor = color === 'w' ? 'white' : 'black';
+    const pieceColor = color === 'white' ? 'white' : 'black';
     setChessPiece(`/chess-pieces/${pieceColor}-${type}.png`);
   }, [type, color]);
 
@@ -30,7 +30,7 @@ const Piece = ({ type, color, pokemon, x, y, movePiece, playerColor }) => {
     item: { type, x, y },
     end: (item, monitor) => {
       const dropResult = monitor.getDropResult();
-      if (item && dropResult && color.charAt(0) === playerColor.charAt(0)) {
+      if (item && dropResult) {
         movePiece(item.x, item.y, dropResult.x, dropResult.y);
       }
     },

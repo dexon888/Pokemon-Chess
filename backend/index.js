@@ -3,7 +3,7 @@ const http = require('http');
 const socketIo = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const { Chess } = require('chess.js');
+const CustomChess = require('./customChess');
 const Game = require('./models/Game');
 
 const app = express();
@@ -33,11 +33,12 @@ mongoose.connect(dbURI, {
 app.post('/api/new-game', async (req, res) => {
   try {
     const { username } = req.body;
-    const chess = new Chess();
+    const chess = new CustomChess();
     const gameId = Date.now().toString();
     const newGame = new Game({
       gameId,
-      fen: chess.fen(),
+      fen: chess.getFen(),
+      board: chess.getBoardState(),
       players: {
         white: { id: null, name: username || '' },
         black: { id: null, name: '' },
@@ -45,35 +46,7 @@ app.post('/api/new-game', async (req, res) => {
     });
 
     await newGame.save();
-    res.status(201).json({ gameId, fen: chess.fen() });
-  } catch (error) {
-    console.error('Error creating new game:', error);
-    res.status(500).json({ error: 'Failed to create new game' });
-  }
-});
-
-app.post('/api/accept-challenge', async (req, res) => {
-  const { challenger, challengee } = req.body;
-  const gameId = Date.now().toString();
-  const chess = new Chess();
-  const players = Math.random() > 0.5 
-    ? { white: challenger, black: challengee } 
-    : { white: challengee, black: challenger };
-
-  const newGame = new Game({
-    gameId,
-    fen: chess.fen(),
-    players: {
-      white: { id: players.white.id, name: players.white.name },
-      black: { id: players.black.id, name: players.black.name },
-    },
-  });
-
-  try {
-    await newGame.save();
-    io.to(players.white.id).emit('startGame', { gameId, color: 'white' });
-    io.to(players.black.id).emit('startGame', { gameId, color: 'black' });
-    res.status(201).json({ gameId, players });
+    res.status(201).json({ gameId, fen: chess.getFen(), board: chess.getBoardState() });
   } catch (error) {
     console.error('Error creating new game:', error);
     res.status(500).json({ error: 'Failed to create new game' });
@@ -82,49 +55,42 @@ app.post('/api/accept-challenge', async (req, res) => {
 
 app.post('/api/move/:gameId', async (req, res) => {
   const gameId = req.params.gameId;
-  const { from, to, promotion, playerColor } = req.body;
+  const { from, to } = req.body;  // Remove playerColor
+
   const game = await Game.findOne({ gameId });
 
-  console.log(`Move received for game ${gameId} from ${from} to ${to} by ${playerColor}`);
+  console.log(`Move received for game ${gameId} from ${from} to ${to}`);
 
   if (game) {
-    const chess = new Chess();
-    chess.load(game.fen);
+    const chess = new CustomChess();
+    chess.load(game.fen);  // Use load to load the FEN
 
-    if ((playerColor === 'white' && chess.turn() !== 'w') || (playerColor === 'black' && chess.turn() !== 'b')) {
-      console.log('Not your turn');
-      return res.status(400).json({ error: 'Not your turn' });
-    }
+    const result = chess.move(from, to);
 
-    try {
-      const move = chess.move({ from, to, promotion });
-      if (move) {
-        game.fen = chess.fen();
-        game.updated_at = Date.now();
-        await game.save();
+    if (result.valid) {
+      game.fen = chess.getFen();
+      game.updated_at = Date.now();
+      await game.save();
 
-        // Emit game state to both players
-        io.to(game.players.white.id).emit('gameState', { fen: game.fen, turn: chess.turn(), move });
-        io.to(game.players.black.id).emit('gameState', { fen: game.fen, turn: chess.turn(), move });
+      io.to(game.players.white.id).emit('gameState', { fen: chess.getBoardState(), turn: chess.getTurn(), move: { from, to } });
+      io.to(game.players.black.id).emit('gameState', { fen: chess.getBoardState(), turn: chess.getTurn(), move: { from, to } });
 
-        console.log(`Move successful: ${from} to ${to}`);
-        console.log(`Emitting gameState to white: ${game.players.white.id}, black: ${game.players.black.id} with FEN: ${game.fen} and turn: ${chess.turn()}`);
-
-        res.json({ fen: game.fen, move });
-      } else {
-        console.log('Invalid move');
-        res.status(400).json({ error: 'Invalid move' });
+      if (result.gameOver) {
+        io.to(game.players.white.id).emit('gameOver', { winner: result.winner });
+        io.to(game.players.black.id).emit('gameOver', { winner: result.winner });
+        console.log(`${result.winner} wins by capturing the king`);
       }
-    } catch (error) {
-      console.error(`Invalid move from ${from} to ${to}:`, error);
-      res.status(400).json({ error: 'Invalid move' });
+
+      res.json({ fen: chess.getBoardState(), move: { from, to }, gameOver: result.gameOver });
+    } else {
+      console.log('Invalid move');
+      res.status(400).json({ error: result.error });
     }
   } else {
     console.log('Game not found');
     res.status(404).json({ error: 'Game not found' });
   }
 });
-
 
 
 let onlineUsers = [];
@@ -143,9 +109,9 @@ io.on('connection', (socket) => {
 
   socket.on('acceptChallenge', async ({ challenger, challengee }) => {
     const gameId = Date.now().toString();
-    const chess = new Chess();
+    const chess = new CustomChess();
     const players = Math.random() > 0.5 ? { white: challenger, black: challengee } : { white: challengee, black: challenger };
-    const newGame = new Game({ gameId, fen: chess.fen(), players });
+    const newGame = new Game({ gameId, fen: chess.getFen(), players });  // Save FEN string directly
 
     try {
       await newGame.save();
@@ -200,7 +166,6 @@ io.on('connection', (socket) => {
   socket.on('testEvent', (data) => {
     console.log('Test event received:', data);
   });
-  
 
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
@@ -211,3 +176,4 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+

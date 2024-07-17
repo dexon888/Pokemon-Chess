@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+// src/components/GameWrapper.jsx
+import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import Board from './Board';
 import Logout from './Logout';
 import { Container, Typography, Button, Box } from '@mui/material';
 import { styled } from '@mui/system';
-import { initializePieces } from '../utils'; // Make sure this import is correct
+import { initializePieces } from '../utils';
 
 const GameContainer = styled(Container)({
   backgroundColor: '#1d1d1d',
@@ -25,7 +26,22 @@ const BoardContainer = styled(Box)({
   margin: '20px 0',
 });
 
-const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, gameOver, setGameOver, movePiece, restartGame, playerColor, setPlayerColor, turn, setTurn, username }) => {
+const GameWrapper = ({
+  socket,
+  gameId,
+  setGameId,
+  pieces,
+  setPieces,
+  gameOver,
+  setGameOver,
+  movePiece,
+  restartGame,
+  playerColor,
+  setPlayerColor,
+  turn,
+  setTurn,
+  username
+}) => {
   const { gameId: paramGameId, username: paramUsername, color: paramColor } = useParams();
 
   useEffect(() => {
@@ -43,15 +59,14 @@ const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, game
   useEffect(() => {
     if (socket) {
       console.log(`Setting up socket listeners for gameId=${gameId}, username=${username}`);
-      
+
       socket.emit('joinGame', { gameId, username });
 
       const handleGameState = ({ fen, turn, move }) => {
         console.log('Received game state:', { fen, turn, move });
-        chess.load(fen);
-        setTurn(turn);
-        const updatedPieces = initializePieces(chess.board());
+        const updatedPieces = initializePieces(fen);
         setPieces(updatedPieces);
+        setTurn(turn);
         console.log('Updated Pieces:', updatedPieces);
         console.log('Updated Turn:', turn);
       };
@@ -65,9 +80,9 @@ const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, game
         console.log('Received invalidMove:', message);
       };
 
-      const handleGameOver = (message) => {
-        console.log('Received gameOver:', message);
-        setGameOver(message);
+      const handleGameOver = ({ winner }) => {
+        console.log(`Received gameOver: ${winner} wins`);
+        setGameOver(`${winner} wins by capturing the king!`);
       };
 
       socket.on('gameState', handleGameState);
@@ -83,7 +98,7 @@ const GameWrapper = ({ chess, socket, gameId, setGameId, pieces, setPieces, game
         socket.off('gameOver', handleGameOver);
       };
     }
-  }, [socket, gameId, chess, setPlayerColor, setGameOver, setPieces, username, setTurn]);
+  }, [socket, gameId, setPlayerColor, setGameOver, setPieces, username, setTurn]);
 
   useEffect(() => {
     console.log('playerColor state updated:', playerColor);

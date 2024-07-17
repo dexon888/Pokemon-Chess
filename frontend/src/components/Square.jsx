@@ -1,4 +1,3 @@
-// src/components/Square.jsx
 import React from 'react';
 import { useDrop } from 'react-dnd';
 import { ItemTypes } from '../constants';
