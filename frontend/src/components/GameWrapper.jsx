@@ -1,4 +1,3 @@
-// src/components/GameWrapper.jsx
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import Board from './Board';
@@ -62,9 +61,9 @@ const GameWrapper = ({
 
       socket.emit('joinGame', { gameId, username });
 
-      const handleGameState = ({ fen, turn, move }) => {
+      const handleGameState = async ({ fen, turn, move }) => {
         console.log('Received game state:', { fen, turn, move });
-        const updatedPieces = initializePieces(fen);
+        const updatedPieces = await initializePieces(fen);
         setPieces(updatedPieces);
         setTurn(turn);
         console.log('Updated Pieces:', updatedPieces);

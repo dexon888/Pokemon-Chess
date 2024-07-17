@@ -1,30 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useDrag } from 'react-dnd';
 import { ItemTypes } from '../constants';
-import axios from 'axios';
 
-const Piece = ({ type, color, pokemon, x, y, movePiece }) => {
-  const [sprite, setSprite] = useState('');
-  const [chessPiece, setChessPiece] = useState('');
-
-  useEffect(() => {
-    const fetchSprite = async () => {
-      try {
-        const response = await axios.get(`https://pokeapi.co/api/v2/pokemon/${pokemon}`);
-        setSprite(response.data.sprites.front_default);
-      } catch (error) {
-        console.error(`Error fetching sprite for ${pokemon}:`, error);
-      }
-    };
-
-    fetchSprite();
-  }, [pokemon]);
-
-  useEffect(() => {
-    const pieceColor = color === 'white' ? 'white' : 'black';
-    setChessPiece(`/chess-pieces/${pieceColor}-${type}.png`);
-  }, [type, color]);
-
+const Piece = ({ type, color, pokemon, sprite, x, y, movePiece }) => {
   const [{ isDragging }, drag] = useDrag({
     type: ItemTypes.PIECE,
     item: { type, x, y },
@@ -38,6 +16,9 @@ const Piece = ({ type, color, pokemon, x, y, movePiece }) => {
       isDragging: !!monitor.isDragging(),
     }),
   });
+
+  const pieceColor = color === 'white' ? 'white' : 'black';
+  const chessPiece = `/chess-pieces/${pieceColor}-${type}.png`;
 
   return (
     <div

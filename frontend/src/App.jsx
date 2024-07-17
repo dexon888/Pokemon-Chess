@@ -14,6 +14,7 @@ const App = () => {
   const [playerColor, setPlayerColor] = useState(null);
   const [turn, setTurn] = useState('w');
 
+  // Temporarily bypassing authentication for development purposes
   const user = { username: 'Anonymous' };
   const username = user?.username || 'Anonymous';
 
@@ -42,7 +43,7 @@ const App = () => {
     try {
       const response = await axios.post('http://localhost:5000/api/new-game', { username });
       setGameId(response.data.gameId);
-      const initialPieces = initializePieces(response.data.board);
+      const initialPieces = await initializePieces(response.data.board);
       setPieces(initialPieces);
     } catch (error) {
       console.error('Error creating new game:', error);
@@ -56,7 +57,6 @@ const App = () => {
   }, [username]);
 
   const movePiece = async (fromX, fromY, toX, toY) => {
-    console.log(`Attempting to move piece from ${fromX},${fromY} to ${toX},${toY} by ${playerColor}`);
     if ((playerColor === 'white' && turn !== 'w') || (playerColor === 'black' && turn !== 'b')) {
       console.log('Not your turn!');
       return;
@@ -67,7 +67,7 @@ const App = () => {
 
     try {
       const response = await axios.post(`http://localhost:5000/api/move/${gameId}`, { from, to, playerColor });
-      const updatedPieces = initializePieces(response.data.fen);
+      const updatedPieces = await initializePieces(response.data.fen);
       setPieces(updatedPieces);
       setTurn(response.data.turn);
       if (response.data.gameOver) {

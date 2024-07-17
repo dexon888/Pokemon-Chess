@@ -15,7 +15,6 @@ const SquareContainer = {
 };
 
 const Board = ({ pieces, movePiece, playerColor }) => {
-
   const renderSquare = (i) => {
     const x = i % 8;
     const y = Math.floor(i / 8);
@@ -29,6 +28,7 @@ const Board = ({ pieces, movePiece, playerColor }) => {
               type={piece.type}
               color={piece.color}
               pokemon={piece.pokemon}
+              sprite={piece.sprite}
               x={x}
               y={y}
               movePiece={movePiece}
