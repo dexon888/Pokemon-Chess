@@ -13,8 +13,8 @@ const App = () => {
   const [socket, setSocket] = useState(null);
   const [playerColor, setPlayerColor] = useState(null);
   const [turn, setTurn] = useState('w');
+  const [piecePokemonMap, setPiecePokemonMap] = useState(null);
 
-  // Temporarily bypassing authentication for development purposes
   const user = { username: 'Anonymous' };
   const username = user?.username || 'Anonymous';
 
@@ -43,8 +43,9 @@ const App = () => {
     try {
       const response = await axios.post('http://localhost:5000/api/new-game', { username });
       setGameId(response.data.gameId);
-      const initialPieces = await initializePieces(response.data.board);
-      setPieces(initialPieces);
+      const { pieces, piecePokemonMap } = await initializePieces(response.data.board);
+      setPieces(pieces);
+      setPiecePokemonMap(piecePokemonMap);
     } catch (error) {
       console.error('Error creating new game:', error);
     }
@@ -67,8 +68,9 @@ const App = () => {
 
     try {
       const response = await axios.post(`http://localhost:5000/api/move/${gameId}`, { from, to, playerColor });
-      const updatedPieces = await initializePieces(response.data.fen);
-      setPieces(updatedPieces);
+      const { pieces, piecePokemonMap: newPiecePokemonMap } = await initializePieces(response.data.fen, piecePokemonMap);
+      setPieces(pieces);
+      setPiecePokemonMap(newPiecePokemonMap);
       setTurn(response.data.turn);
       if (response.data.gameOver) {
         setGameOver(`${playerColor === 'w' ? 'White' : 'Black'} wins by capturing the king!`);
@@ -104,6 +106,8 @@ const App = () => {
             turn={turn}
             setTurn={setTurn}
             username={username}
+            piecePokemonMap={piecePokemonMap}
+            setPiecePokemonMap={setPiecePokemonMap}
           />
         }
       />

@@ -42,6 +42,7 @@ const GameWrapper = ({
   username
 }) => {
   const { gameId: paramGameId, username: paramUsername, color: paramColor } = useParams();
+  const [piecePokemonMap, setPiecePokemonMap] = useState(null);
 
   useEffect(() => {
     if (paramGameId && paramGameId !== gameId) {
@@ -61,12 +62,13 @@ const GameWrapper = ({
 
       socket.emit('joinGame', { gameId, username });
 
-      const handleGameState = async ({ fen, turn, move }) => {
+      const handleGameState = async ({ fen, turn, move, piecePokemonMap }) => {
         console.log('Received game state:', { fen, turn, move });
-        const updatedPieces = await initializePieces(fen);
-        setPieces(updatedPieces);
+        const { pieces, piecePokemonMap: newPiecePokemonMap } = await initializePieces(fen, piecePokemonMap);
+        setPieces(pieces);
+        setPiecePokemonMap(newPiecePokemonMap);
         setTurn(turn);
-        console.log('Updated Pieces:', updatedPieces);
+        console.log('Updated Pieces:', pieces);
         console.log('Updated Turn:', turn);
       };
 
@@ -97,7 +99,7 @@ const GameWrapper = ({
         socket.off('gameOver', handleGameOver);
       };
     }
-  }, [socket, gameId, setPlayerColor, setGameOver, setPieces, username, setTurn]);
+  }, [socket, gameId, setPlayerColor, setGameOver, setPieces, username, setTurn, piecePokemonMap]);
 
   useEffect(() => {
     console.log('playerColor state updated:', playerColor);

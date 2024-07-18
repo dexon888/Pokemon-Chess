@@ -1,7 +1,8 @@
+// src/utils.js
 import axios from 'axios';
 
 const POKEMON_API_URL = 'https://pokeapi.co/api/v2/pokemon';
-const POKEMON_LIMIT = 1000; // Set this to the total number of Pokémon available
+const POKEMON_LIMIT = 1000;
 
 export const fetchAllPokemonNames = async () => {
   try {
@@ -39,17 +40,17 @@ const getPokemonType = async (pokemon) => {
   }
 };
 
-export const initializePieces = async (board) => {
+export const initializePieces = async (board, piecePokemonMap = null) => {
   let pieces = {};
-  let piecePokemonMap = {};
-  const pieceTypes = ['p', 'r', 'n', 'b', 'q', 'k'];
 
-  // Fetch all Pokémon names
-  const allPokemonNames = await fetchAllPokemonNames();
+  if (!piecePokemonMap) {
+    piecePokemonMap = {};
+    const pieceTypes = ['p', 'r', 'n', 'b', 'q', 'k'];
+    const allPokemonNames = await fetchAllPokemonNames();
 
-  // Assign a random Pokémon for each piece type
-  for (let type of pieceTypes) {
-    piecePokemonMap[type] = getRandomPokemon(allPokemonNames);
+    for (let type of pieceTypes) {
+      piecePokemonMap[type] = getRandomPokemon(allPokemonNames);
+    }
   }
 
   console.log('Initializing pieces with board state:', board);
@@ -68,12 +69,12 @@ export const initializePieces = async (board) => {
           color: color,
           pokemon: pokemon,
           sprite: sprite,
-          pokemonType: pokemonType, // Add pokemonType to piece
+          pokemonType: pokemonType,
         };
         console.log(`Initialized piece at (${x}, ${y}):`, pieces[`${x}${y}`]);
       }
     }
   }
   console.log('Final pieces:', pieces);
-  return pieces;
+  return { pieces, piecePokemonMap };
 };
