@@ -15,6 +15,8 @@ const SquareContainer = {
 };
 
 const Board = ({ pieces, movePiece, playerColor }) => {
+  console.log('Rendering Board with pieces:', pieces);
+
   const renderSquare = (i) => {
     const x = i % 8;
     const y = Math.floor(i / 8);
@@ -32,7 +34,7 @@ const Board = ({ pieces, movePiece, playerColor }) => {
               x={x}
               y={y}
               movePiece={movePiece}
-              playerColor={playerColor} // Pass playerColor
+              playerColor={playerColor}
             />
           )}
         </Square>

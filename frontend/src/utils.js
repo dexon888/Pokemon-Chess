@@ -1,10 +1,9 @@
-// src/utils.js
-import axios from 'axios';
+const axios = require('axios');
 
 const POKEMON_API_URL = 'https://pokeapi.co/api/v2/pokemon';
 const POKEMON_LIMIT = 1000;
 
-export const fetchAllPokemonNames = async () => {
+const fetchAllPokemonNames = async () => {
   try {
     const response = await axios.get(`${POKEMON_API_URL}?limit=${POKEMON_LIMIT}`);
     const pokemonNames = response.data.results.map(pokemon => pokemon.name);
@@ -40,20 +39,21 @@ const getPokemonType = async (pokemon) => {
   }
 };
 
-export const initializePieces = async (board, piecePokemonMap = null) => {
+const initializePieces = async (board, existingPiecePokemonMap = null) => {
   let pieces = {};
+  let piecePokemonMap = existingPiecePokemonMap || {};
+  const pieceTypes = ['p', 'r', 'n', 'b', 'q', 'k'];
 
-  if (!piecePokemonMap) {
-    piecePokemonMap = {};
-    const pieceTypes = ['p', 'r', 'n', 'b', 'q', 'k'];
-    const allPokemonNames = await fetchAllPokemonNames();
+  const allPokemonNames = await fetchAllPokemonNames();
 
-    for (let type of pieceTypes) {
+  for (let type of pieceTypes) {
+    if (!piecePokemonMap[type]) {
       piecePokemonMap[type] = getRandomPokemon(allPokemonNames);
     }
   }
 
-  console.log('Initializing pieces with board state:', board);
+  console.log('Piece Pokemon Map:', piecePokemonMap);
+
   for (let y = 0; y < board.length; y++) {
     for (let x = 0; x < board[y].length; x++) {
       const piece = board[y][x];
@@ -71,10 +71,15 @@ export const initializePieces = async (board, piecePokemonMap = null) => {
           sprite: sprite,
           pokemonType: pokemonType,
         };
-        console.log(`Initialized piece at (${x}, ${y}):`, pieces[`${x}${y}`]);
       }
     }
   }
+
   console.log('Final pieces:', pieces);
+
   return { pieces, piecePokemonMap };
+};
+
+module.exports = {
+  initializePieces,
 };
