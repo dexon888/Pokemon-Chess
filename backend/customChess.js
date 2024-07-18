@@ -1,3 +1,36 @@
+const typeEffectiveness = {
+  normal: { superEffective: [], notVeryEffective: ['rock', 'steel'], immune: ['ghost'] },
+  fire: { superEffective: ['grass', 'ice', 'bug', 'steel'], notVeryEffective: ['fire', 'water', 'rock', 'dragon'], immune: [] },
+  water: { superEffective: ['fire', 'ground', 'rock'], notVeryEffective: ['water', 'grass', 'dragon'], immune: [] },
+  electric: { superEffective: ['water', 'flying'], notVeryEffective: ['electric', 'grass', 'dragon'], immune: ['ground'] },
+  grass: { superEffective: ['water', 'ground', 'rock'], notVeryEffective: ['fire', 'grass', 'poison', 'flying', 'bug', 'dragon', 'steel'], immune: [] },
+  ice: { superEffective: ['grass', 'ground', 'flying', 'dragon'], notVeryEffective: ['fire', 'water', 'ice', 'steel'], immune: [] },
+  fighting: { superEffective: ['normal', 'ice', 'rock', 'dark', 'steel'], notVeryEffective: ['poison', 'flying', 'psychic', 'bug', 'fairy'], immune: ['ghost'] },
+  poison: { superEffective: ['grass', 'fairy'], notVeryEffective: ['poison', 'ground', 'rock', 'ghost'], immune: ['steel'] },
+  ground: { superEffective: ['fire', 'electric', 'poison', 'rock', 'steel'], notVeryEffective: ['grass', 'bug'], immune: ['flying'] },
+  flying: { superEffective: ['grass', 'fighting', 'bug'], notVeryEffective: ['electric', 'rock', 'steel'], immune: ['ground'] },
+  psychic: { superEffective: ['fighting', 'poison'], notVeryEffective: ['psychic', 'steel'], immune: ['dark'] },
+  bug: { superEffective: ['grass', 'psychic', 'dark'], notVeryEffective: ['fire', 'fighting', 'poison', 'flying', 'ghost', 'steel', 'fairy'], immune: [] },
+  rock: { superEffective: ['fire', 'ice', 'flying', 'bug'], notVeryEffective: ['fighting', 'ground', 'steel'], immune: [] },
+  ghost: { superEffective: ['psychic', 'ghost'], notVeryEffective: ['dark'], immune: ['normal'] },
+  dragon: { superEffective: ['dragon'], notVeryEffective: ['steel'], immune: ['fairy'] },
+  dark: { superEffective: ['psychic', 'ghost'], notVeryEffective: ['fighting', 'dark', 'fairy'], immune: [] },
+  steel: { superEffective: ['ice', 'rock', 'fairy'], notVeryEffective: ['fire', 'water', 'electric', 'steel'], immune: ['poison'] },
+  fairy: { superEffective: ['fighting', 'dragon', 'dark'], notVeryEffective: ['fire', 'poison', 'steel'], immune: ['dragon'] },
+};
+
+const isSuperEffective = (attackingType, defendingType) => {
+  return typeEffectiveness[attackingType]?.superEffective.includes(defendingType);
+};
+
+const isNotVeryEffective = (attackingType, defendingType) => {
+  return typeEffectiveness[attackingType]?.notVeryEffective.includes(defendingType);
+};
+
+const isNeutral = (attackingType, defendingType) => {
+  return !isSuperEffective(attackingType, defendingType) && !isNotVeryEffective(attackingType, defendingType);
+};
+
 class CustomChess {
   constructor() {
     this.board = [
@@ -11,6 +44,8 @@ class CustomChess {
       ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
     ];
     this.turn = 'w'; // White to move first
+    this.gameOver = false;
+    this.winner = null;
   }
 
   load(fen) {
@@ -72,16 +107,25 @@ class CustomChess {
 
     if (!piece) return { valid: false, error: 'No piece at the source' };
 
-    // Remove turn restriction for single client mode
-    // if (this.turn === 'w' && !this.isWhite(piece)) return { valid: false, error: 'Not white\'s turn' };
-    // if (this.turn === 'b' && !this.isBlack(piece)) return { valid: false, error: 'Not black\'s turn' };
-
     if (!this.isValidMove(piece, from, to)) {
       return { valid: false, error: 'Invalid move' };
     }
 
-    this.board[toY][toX] = piece;
-    this.board[fromY][fromX] = null;
+    const attackingType = piece.pokemonType; // Assuming piece object has pokemonType
+    const defendingType = target?.pokemonType; // Assuming target object has pokemonType
+
+    if (target) {
+      if (isSuperEffective(attackingType, defendingType)) {
+        this.board[toY][toX] = piece;
+        this.board[fromY][fromX] = null;
+      } else if (isNotVeryEffective(attackingType, defendingType) || isNeutral(attackingType, defendingType)) {
+        this.board[toY][toX] = null;
+        this.board[fromY][fromX] = null;
+      }
+    } else {
+      this.board[toY][toX] = piece;
+      this.board[fromY][fromX] = null;
+    }
 
     if (target && target.toLowerCase() === 'k') {
       this.gameOver = true;
@@ -94,9 +138,6 @@ class CustomChess {
   }
 
   isValidMove(piece, from, to) {
-    const [fromX, fromY] = from;
-    const [toX, toY] = to;
-
     switch (piece.toLowerCase()) {
       case 'p':
         return this.isValidPawnMove(piece, from, to);

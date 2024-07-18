@@ -29,6 +29,16 @@ const fetchPokemonSprite = async (pokemon) => {
   }
 };
 
+const getPokemonType = async (pokemon) => {
+  try {
+    const response = await axios.get(`${POKEMON_API_URL}/${pokemon}`);
+    return response.data.types[0].type.name;
+  } catch (error) {
+    console.error(`Error fetching type for ${pokemon}:`, error);
+    return 'normal';
+  }
+};
+
 export const initializePieces = async (board) => {
   let pieces = {};
   let piecePokemonMap = {};
@@ -51,12 +61,14 @@ export const initializePieces = async (board) => {
         const pieceType = piece.toLowerCase();
         const pokemon = piecePokemonMap[pieceType];
         const sprite = await fetchPokemonSprite(pokemon);
+        const pokemonType = await getPokemonType(pokemon);
 
         pieces[`${x}${y}`] = {
           type: pieceType,
           color: color,
           pokemon: pokemon,
           sprite: sprite,
+          pokemonType: pokemonType, // Add pokemonType to piece
         };
         console.log(`Initialized piece at (${x}, ${y}):`, pieces[`${x}${y}`]);
       }
