@@ -3,6 +3,15 @@ const mongoose = require('mongoose');
 const gameSchema = new mongoose.Schema({
   gameId: { type: String, required: true, unique: true },
   fen: { type: String, required: true },
+  turn: { type: String, required: true, default: 'w' },
+  pieces: { type: Map, of: new mongoose.Schema({
+    type: { type: String, required: true },
+    color: { type: String, required: true },
+    pokemon: { type: String, required: true },
+    sprite: { type: String, required: true },
+    pokemonType: { type: String, required: true }
+  })},
+  piecePokemonMap: { type: Map, of: String },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now },
   players: {

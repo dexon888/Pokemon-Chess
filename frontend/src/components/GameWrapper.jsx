@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import Board from './Board';
 import Logout from './Logout';
 import { Container, Typography, Button, Box } from '@mui/material';
 import { styled } from '@mui/system';
-import { initializePieces } from '../utils';
 
 const GameContainer = styled(Container)({
   backgroundColor: '#1d1d1d',
@@ -39,45 +38,47 @@ const GameWrapper = ({
   setPlayerColor,
   turn,
   setTurn,
-  username
+  username,
+  setPiecePokemonMap
 }) => {
   const { gameId: paramGameId, username: paramUsername, color: paramColor } = useParams();
-  const [piecePokemonMap, setPiecePokemonMap] = useState(null);
+  const initialized = useRef(false);
 
   useEffect(() => {
-    if (paramGameId && paramGameId !== gameId) {
-      setGameId(paramGameId);
-      console.log(`Set gameId from params: ${paramGameId}`);
+    if (!initialized.current) {
+      if (paramGameId && paramGameId !== gameId) {
+        setGameId(paramGameId);
+        console.log(`Set gameId from params: ${paramGameId}`);
+      }
+      if (paramColor && paramColor !== playerColor) {
+        setPlayerColor(paramColor);
+        console.log(`Set playerColor from params: ${paramColor}`);
+      }
+      initialized.current = true;
     }
-    if (paramUsername && paramUsername !== username) {
-      username = paramUsername;
-      console.log(`Set username from params: ${paramUsername}`);
-    }
-    if (paramColor && paramColor !== playerColor) {
-      setPlayerColor(paramColor);
-      console.log(`Set playerColor from params: ${paramColor}`);
-    }
-  }, [paramGameId, gameId, setGameId, paramUsername, username, paramColor, playerColor, setPlayerColor]);
+  }, [paramGameId, gameId, setGameId, paramColor, playerColor, setPlayerColor]);
 
   useEffect(() => {
     if (socket && gameId) {
-      console.log(`Setting up socket listeners for gameId=${gameId}, username=${username}`);
+      console.log(`Setting up socket listeners for gameId=${gameId}, username=${paramUsername}`);
 
-      socket.emit('joinGame', { gameId, username });
-      console.log('Emitting joinGame event:', { gameId, username });
+      socket.emit('joinGame', { gameId, username: paramUsername });
+      console.log('Emitting joinGame event:', { gameId, username: paramUsername });
 
-      const handleGameState = async ({ fen, turn, move, pieces, piecePokemonMap }) => {
-        try {
-          console.log('Received game state:', { fen, turn, move, pieces, piecePokemonMap });
+      const handleGameState = ({ fen, turn, pieces, piecePokemonMap }) => {
+        console.log('Received game state:', { fen, turn, pieces, piecePokemonMap });
+        if (pieces) {
           setPieces(pieces);
-          setPiecePokemonMap(piecePokemonMap);
-          setTurn(turn);
-          console.log('Updated Pieces:', pieces);
-          console.log('Updated Turn:', turn);
-          console.log('Updated Piece Pokemon Map:', piecePokemonMap);
-        } catch (error) {
-          console.error('Error handling game state:', error);
         }
+        if (piecePokemonMap) {
+          setPiecePokemonMap(piecePokemonMap);
+        }
+        if (turn) {
+          setTurn(turn);
+        }
+        console.log('Updated Pieces:', pieces);
+        console.log('Updated Turn:', turn);
+        console.log('Updated Piece Pokemon Map:', piecePokemonMap);
       };
 
       const handlePlayerColor = (color) => {
@@ -107,7 +108,7 @@ const GameWrapper = ({
         socket.off('gameOver', handleGameOver);
       };
     }
-  }, [socket, gameId, username, setPlayerColor, setGameOver, setPieces, setTurn]);
+  }, [socket, gameId, paramUsername, setPlayerColor, setGameOver, setPieces, setTurn, setPiecePokemonMap]);
 
   useEffect(() => {
     console.log('playerColor state updated:', playerColor);
@@ -126,7 +127,11 @@ const GameWrapper = ({
       <Logout />
       {gameOver && <Typography variant="h6">{gameOver}</Typography>}
       <BoardContainer>
-        <Board pieces={pieces} movePiece={movePiece} playerColor={playerColor} />
+        {pieces && Object.keys(pieces).length > 0 ? (
+          <Board pieces={pieces} movePiece={movePiece} playerColor={playerColor} />
+        ) : (
+          <Typography variant="h6">Loading pieces...</Typography>
+        )}
       </BoardContainer>
       <Button variant="contained" color="primary" onClick={restartGame}>Restart Game</Button>
       <Button variant="contained" color="secondary" onClick={emitTestEvent}>Emit Test Event</Button>

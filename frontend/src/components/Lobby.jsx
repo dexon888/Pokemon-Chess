@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import io from 'socket.io-client';
 import { useNavigate } from 'react-router-dom';
-import { Container, TextField, Button, Typography, Box, List, ListItem, ListItemText } from '@mui/material';
+import { Container, TextField, Button, Typography, List, ListItem, ListItemText } from '@mui/material';
 import { styled } from '@mui/system';
-
-const socket = io('http://localhost:5000');
 
 const LobbyContainer = styled(Container)({
   backgroundColor: '#1d1d1d',
@@ -29,9 +26,9 @@ const UsernameInput = styled(TextField)({
   },
 });
 
-const Lobby = () => {
+const Lobby = ({ socket, setUsername }) => {
   const [users, setUsers] = useState([]);
-  const [user, setUser] = useState(null);
+  const [username, setLocalUsername] = useState('');
   const [challenges, setChallenges] = useState([]);
   const navigate = useNavigate();
 
@@ -44,8 +41,8 @@ const Lobby = () => {
       setChallenges((prev) => [...prev, challenger]);
     });
 
-    socket.on('startGame', ({ gameId, color, players }) => {
-      navigate(`/game/${gameId}/${players[color].name}/${color}`);
+    socket.on('startGame', ({ gameId, players, color }) => {
+      navigate(`/game/${gameId}/${username}/${color}`);
     });
 
     return () => {
@@ -53,27 +50,24 @@ const Lobby = () => {
       socket.off('receiveChallenge');
       socket.off('startGame');
     };
-  }, [navigate]);
+  }, [socket, navigate, username]);
 
   const handleJoinLobby = (username) => {
     const user = { id: socket.id, name: username };
-    setUser(user);
+    setLocalUsername(username);
+    setUsername(username); // Update the username in the App component
     socket.emit('joinLobby', user);
   };
 
   const handleChallengePlayer = (challengee) => {
-    socket.emit('challengePlayer', { challenger: user, challengee });
+    socket.emit('challengePlayer', { challenger: { id: socket.id, name: username }, challengee });
   };
 
   const handleAcceptChallenge = (challenger) => {
-    socket.emit('acceptChallenge', { challenger, challengee: user });
-    socket.on('startGame', ({ gameId, players, color }) => {
-      navigate(`/game/${gameId}/${user.name}/${color}`);
-    });
+    socket.emit('acceptChallenge', { challenger, challengee: { id: socket.id, name: username } });
   };
-  
 
-  if (!user) {
+  if (!username) {
     return (
       <LobbyContainer maxWidth="xs">
         <Typography variant="h4" color="primary" mb={2}>Enter your username to join the lobby</Typography>
@@ -89,13 +83,13 @@ const Lobby = () => {
 
   return (
     <LobbyContainer maxWidth="md">
-      <Typography variant="h4" color="primary" mb={2}>Welcome to the Lobby, {user.name}</Typography>
+      <Typography variant="h4" color="primary" mb={2}>Welcome to the Lobby, {username}</Typography>
       <Typography variant="h5" color="secondary" mb={2}>Online Players:</Typography>
       <List sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }}>
         {users.map((u) => (
           <ListItem key={u.id} sx={{ backgroundColor: '#333', borderRadius: '5px', marginBottom: '10px' }}>
             <ListItemText primary={u.user.name} sx={{ color: '#fff' }} />
-            {u.id !== user.id && (
+            {u.id !== socket.id && (
               <Button variant="contained" color="primary" onClick={() => handleChallengePlayer(u.user)}>
                 Challenge
               </Button>

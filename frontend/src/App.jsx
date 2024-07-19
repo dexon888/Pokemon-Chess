@@ -10,37 +10,18 @@ import Lobby from './components/Lobby';
 import ProtectedRoute from './components/ProtectedRoute';
 import { supabase } from './supabaseClient';
 
+const socket = io('http://localhost:5000');
+
 const App = () => {
   const [gameId, setGameId] = useState(null);
   const [pieces, setPieces] = useState([]);
   const [gameOver, setGameOver] = useState(null);
-  const [socket, setSocket] = useState(null);
   const [playerColor, setPlayerColor] = useState(null);
   const [turn, setTurn] = useState('w');
   const [piecePokemonMap, setPiecePokemonMap] = useState(null);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!socket) {
-      const newSocket = io('http://localhost:5000', {
-        transports: ['websocket', 'polling'],
-      });
-      setSocket(newSocket);
-
-      newSocket.on('connect', () => {
-        console.log('Socket connected:', newSocket.id);
-      });
-
-      newSocket.on('disconnect', () => {
-        console.log('Socket disconnected:', newSocket.id);
-      });
-
-      return () => {
-        newSocket.close();
-      };
-    }
-  }, [socket]);
+  const [username, setUsername] = useState('');
 
   useEffect(() => {
     const checkUser = async () => {
@@ -51,17 +32,6 @@ const App = () => {
     checkUser();
   }, []);
 
-  const createGame = async (username) => {
-    try {
-      const response = await axios.post('http://localhost:5000/api/new-game', { username });
-      setGameId(response.data.gameId);
-      setPieces(response.data.pieces);
-      setPiecePokemonMap(response.data.piecePokemonMap);
-      setTurn('w'); // Set initial turn to white
-    } catch (error) {
-      console.error('Error creating new game:', error);
-    }
-  };
 
   const movePiece = async (fromX, fromY, toX, toY) => {
     if ((playerColor === 'white' && turn !== 'w') || (playerColor === 'black' && turn !== 'b')) {
@@ -99,7 +69,7 @@ const App = () => {
     <Routes>
       <Route path="/login" element={<Login setUser={setUser} />} />
       <Route path="/signup" element={<Signup />} />
-      <Route path="/lobby" element={<ProtectedRoute><Lobby socket={socket} user={user} /></ProtectedRoute>} />
+      <Route path="/lobby" element={<ProtectedRoute><Lobby socket={socket} setUsername={setUsername} /></ProtectedRoute>} />
       <Route
         path="/game/:gameId/:username/:color"
         element={
@@ -118,7 +88,7 @@ const App = () => {
               setPlayerColor={setPlayerColor}
               turn={turn}
               setTurn={setTurn}
-              username={user?.email || 'Anonymous'}
+              username={username}
               piecePokemonMap={piecePokemonMap}
               setPiecePokemonMap={setPiecePokemonMap}
             />

@@ -53,18 +53,23 @@ io.on('connection', (socket) => {
     const gameId = Date.now().toString();
     const chess = new CustomChess();
     const players = Math.random() > 0.5 ? { white: challenger, black: challengee } : { white: challengee, black: challenger };
+    
+    // Initialize pieces and piecePokemonMap
     const { pieces, piecePokemonMap } = await initializePieces(chess.getBoardState());
+
     const newGame = new Game({ gameId, fen: chess.getFen(), players, turn: 'w', pieces, piecePokemonMap });
 
     try {
       await newGame.save();
       console.log(`Game created with players: ${JSON.stringify(players)}`);
-      io.to(challenger.id).emit('startGame', { gameId, players, color: 'white', fen: chess.getFen(), pieces, piecePokemonMap });
-      io.to(challengee.id).emit('startGame', { gameId, players, color: 'black', fen: chess.getFen(), pieces, piecePokemonMap });
+      io.to(challenger.id).emit('startGame', { gameId, players, color: players.white.id === challenger.id ? 'white' : 'black', fen: chess.getFen(), pieces, piecePokemonMap });
+      io.to(challengee.id).emit('startGame', { gameId, players, color: players.white.id === challengee.id ? 'white' : 'black', fen: chess.getFen(), pieces, piecePokemonMap });
     } catch (err) {
       console.error('Error creating new game:', err);
     }
   });
+
+
 
   socket.on('joinGame', async ({ gameId, username }) => {
     console.log(`joinGame event received with gameId: ${gameId} and username: ${username}`);
@@ -74,30 +79,39 @@ io.on('connection', (socket) => {
       console.log('Game found:', game);
 
       if (game) {
-        if (!game.players.white.id) {
-          game.players.white.id = socket.id;
-          game.players.white.name = username || '';
-          await game.save();
-          socket.emit('playerColor', 'white');
-          console.log(`Assigned white to ${socket.id}`);
-        } else if (!game.players.black.id) {
-          game.players.black.id = socket.id;
-          game.players.black.name = username || '';
-          await game.save();
-          socket.emit('playerColor', 'black');
-          console.log(`Assigned black to ${socket.id}`);
-        } else {
-          if (socket.id === game.players.white.id) {
+        const isPlayerWhite = game.players.white.id === socket.id;
+        const isPlayerBlack = game.players.black.id === socket.id;
+
+        if (!isPlayerWhite && !isPlayerBlack) {
+          if (!game.players.white.id) {
+            game.players.white.id = socket.id;
+            game.players.white.name = username || '';
+            await game.save();
             socket.emit('playerColor', 'white');
-            console.log(`Confirmed white for ${socket.id}`);
-          } else if (socket.id === game.players.black.id) {
+            console.log(`Assigned white to ${socket.id}`);
+          } else if (!game.players.black.id) {
+            game.players.black.id = socket.id;
+            game.players.black.name = username || '';
+            await game.save();
             socket.emit('playerColor', 'black');
-            console.log(`Confirmed black for ${socket.id}`);
+            console.log(`Assigned black to ${socket.id}`);
           } else {
             socket.emit('playerColor', 'spectator');
             console.log(`Client ${socket.id} is a spectator`);
           }
+        } else {
+          const color = isPlayerWhite ? 'white' : 'black';
+          socket.emit('playerColor', color);
+          console.log(`Confirmed ${color} for ${socket.id}`);
         }
+
+        console.log('Emitting gameState event with:', {
+          fen: game.fen,
+          turn: game.turn,
+          pieces: game.pieces,
+          piecePokemonMap: game.piecePokemonMap
+        });
+
         socket.emit('gameState', {
           fen: game.fen,
           turn: game.turn,
@@ -112,60 +126,63 @@ io.on('connection', (socket) => {
     }
   });
 
+
+
   socket.on('move', async ({ gameId, from, to }) => {
-    console.log(`Move request received: gameId=${gameId}, from=${from}, to=${to}`);
-    try {
-      const game = await Game.findOne({ gameId });
-      if (game) {
-        const chess = new CustomChess();
-        chess.load(game.fen);
+  console.log(`Move request received: gameId=${gameId}, from=${from}, to=${to}`);
+  try {
+    const game = await Game.findOne({ gameId });
+    if (game) {
+      const chess = new CustomChess();
+      chess.load(game.fen);
 
-        const result = chess.move(from, to);
+      const result = chess.move(from, to);
 
-        if (result.valid) {
-          const { pieces, piecePokemonMap } = await initializePieces(chess.getBoardState());
-          game.fen = chess.getFen();
-          game.updated_at = Date.now();
-          game.turn = game.turn === 'w' ? 'b' : 'w'; // Switch turn
-          game.pieces = pieces;
-          game.piecePokemonMap = piecePokemonMap;
-          await game.save();
+      if (result.valid) {
+        const { pieces, piecePokemonMap } = await initializePieces(chess.getBoardState());
+        game.fen = chess.getFen();
+        game.updated_at = Date.now();
+        game.turn = game.turn === 'w' ? 'b' : 'w'; // Switch turn
+        game.pieces = pieces;
+        game.piecePokemonMap = piecePokemonMap;
+        await game.save();
 
-          console.log('Move made:', { from, to, fen: chess.getFen(), turn: game.turn });
+        console.log('Move made:', { from, to, fen: chess.getFen(), turn: game.turn });
 
-          io.to(game.players.white.id).emit('gameState', {
-            fen: chess.getBoardState(),
-            turn: game.turn,
-            move: { from, to },
-            pieces: pieces,
-            piecePokemonMap: piecePokemonMap // Send the piecePokemonMap
-          });
-          io.to(game.players.black.id).emit('gameState', {
-            fen: chess.getBoardState(),
-            turn: game.turn,
-            move: { from, to },
-            pieces: pieces,
-            piecePokemonMap: piecePokemonMap // Send the piecePokemonMap
-          });
+        io.to(game.players.white.id).emit('gameState', {
+          fen: chess.getBoardState(),
+          turn: game.turn,
+          move: { from, to },
+          pieces: pieces,
+          piecePokemonMap: piecePokemonMap
+        });
+        io.to(game.players.black.id).emit('gameState', {
+          fen: chess.getBoardState(),
+          turn: game.turn,
+          move: { from, to },
+          pieces: pieces,
+          piecePokemonMap: piecePokemonMap
+        });
 
-          if (result.gameOver) {
-            io.to(game.players.white.id).emit('gameOver', { winner: result.winner });
-            io.to(game.players.black.id).emit('gameOver', { winner: result.winner });
-            console.log(`${result.winner} wins by capturing the king`);
-          }
-        } else {
-          console.log('Invalid move:', result.error);
-          socket.emit('invalidMove', { error: result.error });
+        if (result.gameOver) {
+          io.to(game.players.white.id).emit('gameOver', { winner: result.winner });
+          io.to(game.players.black.id).emit('gameOver', { winner: result.winner });
+          console.log(`${result.winner} wins by capturing the king`);
         }
       } else {
-        console.log('Game not found for move:', gameId);
-        socket.emit('error', { error: 'Game not found' });
+        console.log('Invalid move:', result.error);
+        socket.emit('invalidMove', { error: result.error });
       }
-    } catch (error) {
-      console.error(`Error processing move for gameId=${gameId}:`, error);
-      socket.emit('error', { error: 'Failed to process move' });
+    } else {
+      console.log('Game not found for move:', gameId);
+      socket.emit('error', { error: 'Game not found' });
     }
-  });
+  } catch (error) {
+    console.error(`Error processing move for gameId=${gameId}:`, error);
+    socket.emit('error', { error: 'Failed to process move' });
+  }
+});
+
 
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
