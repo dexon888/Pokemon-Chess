@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Route, Routes, Navigate } from 'react-router-dom';
 import GameWrapper from './components/GameWrapper.jsx';
 import io from 'socket.io-client';
-import axios from 'axios';
 import './App.css';
 import Login from './components/Login';
 import Signup from './components/Signup';
@@ -32,29 +31,6 @@ const App = () => {
     checkUser();
   }, []);
 
-
-  const movePiece = async (fromX, fromY, toX, toY) => {
-    if ((playerColor === 'white' && turn !== 'w') || (playerColor === 'black' && turn !== 'b')) {
-      console.log('Not your turn!');
-      return;
-    }
-
-    const from = [fromX, fromY];
-    const to = [toX, toY];
-
-    try {
-      const response = await axios.post(`http://localhost:5000/api/move/${gameId}`, { from, to });
-      setPieces(response.data.pieces);
-      setPiecePokemonMap(response.data.piecePokemonMap);
-      setTurn(response.data.turn); // Update the turn state
-      if (response.data.gameOver) {
-        setGameOver(`${response.data.winner} wins by capturing the king!`);
-      }
-    } catch (error) {
-      console.error(`Error during move from ${from} to ${to}:`, error);
-    }
-  };
-
   const restartGame = () => {
     if (socket) {
       socket.emit('restartGame', { gameId });
@@ -82,7 +58,6 @@ const App = () => {
               setPieces={setPieces}
               gameOver={gameOver}
               setGameOver={setGameOver}
-              movePiece={movePiece}
               restartGame={restartGame}
               playerColor={playerColor}
               setPlayerColor={setPlayerColor}

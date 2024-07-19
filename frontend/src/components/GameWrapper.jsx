@@ -4,6 +4,7 @@ import Board from './Board';
 import Logout from './Logout';
 import { Container, Typography, Button, Box } from '@mui/material';
 import { styled } from '@mui/system';
+import axios from 'axios';
 
 const GameContainer = styled(Container)({
   backgroundColor: '#1d1d1d',
@@ -26,13 +27,10 @@ const BoardContainer = styled(Box)({
 
 const GameWrapper = ({
   socket,
-  gameId,
-  setGameId,
   pieces,
   setPieces,
   gameOver,
   setGameOver,
-  movePiece,
   restartGame,
   playerColor,
   setPlayerColor,
@@ -43,39 +41,34 @@ const GameWrapper = ({
 }) => {
   const { gameId: paramGameId, username: paramUsername, color: paramColor } = useParams();
   const initialized = useRef(false);
+  const [gameId, setGameId] = useState(paramGameId || null);
 
   useEffect(() => {
     if (!initialized.current) {
-      if (paramGameId && paramGameId !== gameId) {
-        setGameId(paramGameId);
-        console.log(`Set gameId from params: ${paramGameId}`);
+      if (paramUsername) {
+        username = paramUsername;
+        console.log(`Set username from params: ${paramUsername}`);
       }
-      if (paramColor && paramColor !== playerColor) {
+      if (paramColor) {
         setPlayerColor(paramColor);
         console.log(`Set playerColor from params: ${paramColor}`);
       }
       initialized.current = true;
     }
-  }, [paramGameId, gameId, setGameId, paramColor, playerColor, setPlayerColor]);
+  }, [paramUsername, username, paramColor, playerColor, setPlayerColor]);
 
   useEffect(() => {
     if (socket && gameId) {
-      console.log(`Setting up socket listeners for gameId=${gameId}, username=${paramUsername}`);
+      console.log(`Setting up socket listeners for gameId=${gameId}, username=${username}`);
 
-      socket.emit('joinGame', { gameId, username: paramUsername });
-      console.log('Emitting joinGame event:', { gameId, username: paramUsername });
+      socket.emit('joinGame', { gameId, username });
+      console.log('Emitting joinGame event:', { gameId, username });
 
       const handleGameState = ({ fen, turn, pieces, piecePokemonMap }) => {
         console.log('Received game state:', { fen, turn, pieces, piecePokemonMap });
-        if (pieces) {
-          setPieces(pieces);
-        }
-        if (piecePokemonMap) {
-          setPiecePokemonMap(piecePokemonMap);
-        }
-        if (turn) {
-          setTurn(turn);
-        }
+        setPieces(pieces || {});
+        setPiecePokemonMap(piecePokemonMap || {});
+        setTurn(turn);
         console.log('Updated Pieces:', pieces);
         console.log('Updated Turn:', turn);
         console.log('Updated Piece Pokemon Map:', piecePokemonMap);
@@ -108,11 +101,33 @@ const GameWrapper = ({
         socket.off('gameOver', handleGameOver);
       };
     }
-  }, [socket, gameId, paramUsername, setPlayerColor, setGameOver, setPieces, setTurn, setPiecePokemonMap]);
+  }, [socket, gameId, username, setPlayerColor, setGameOver, setPieces, setTurn, setPiecePokemonMap]);
 
   useEffect(() => {
     console.log('playerColor state updated:', playerColor);
   }, [playerColor]);
+
+  const movePiece = async (fromX, fromY, toX, toY) => {
+    if ((playerColor === 'white' && turn !== 'w') || (playerColor === 'black' && turn !== 'b')) {
+      console.log('Not your turn!');
+      return;
+    }
+
+    const from = [fromX, fromY];
+    const to = [toX, toY];
+
+    try {
+      const response = await axios.post(`http://localhost:5000/api/move/${gameId}`, { from, to });
+      setPieces(response.data.pieces);
+      setPiecePokemonMap(response.data.piecePokemonMap);
+      setTurn(response.data.turn); // Update the turn state
+      if (response.data.gameOver) {
+        setGameOver(`${response.data.winner} wins by capturing the king!`);
+      }
+    } catch (error) {
+      console.error(`Error during move from ${from} to ${to}:`, error);
+    }
+  };
 
   const emitTestEvent = () => {
     console.log('Emitting test event');
