@@ -69,6 +69,7 @@ io.on('connection', (socket) => {
     }
   });
 
+
   socket.on('joinGame', async ({ gameId, username }) => {
     console.log(`joinGame event received with gameId: ${gameId} and username: ${username}`);
 
@@ -124,72 +125,80 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Ensure the /api/move/:gameId endpoint is defined correctly
   app.post('/api/move/:gameId', async (req, res) => {
-    const { gameId } = req.params;
-    const { from, to } = req.body;
+  const { gameId } = req.params;
+  const { from, to } = req.body;
 
-    console.log(`Move request received: gameId=${gameId}, from=${from}, to=${to}`);
-    try {
-      const game = await Game.findOne({ gameId });
-      if (game) {
-        const chess = new CustomChess();
-        chess.load(game.fen);
+  console.log(`Move request received: gameId=${gameId}, from=${from}, to=${to}`);
+  try {
+    const game = await Game.findOne({ gameId });
+    if (game) {
+      const chess = new CustomChess();
+      chess.load(game.fen);
 
-        const result = chess.move(from, to);
+      const result = chess.move(from, to);
 
-        if (result.valid) {
-          const { pieces, piecePokemonMap } = await initializePieces(chess.getBoardState());
-          game.fen = chess.getFen();
-          game.updated_at = Date.now();
-          game.turn = game.turn === 'w' ? 'b' : 'w'; // Switch turn
-          game.pieces = pieces;
-          game.piecePokemonMap = piecePokemonMap;
-          await game.save();
+      if (result.valid) {
+        game.fen = chess.getFen();
+        game.updated_at = Date.now();
+        game.turn = game.turn === 'w' ? 'b' : 'w'; // Switch turn
 
-          console.log('Move made:', { from, to, fen: chess.getFen(), turn: game.turn });
+        // Update pieces based on new board state without reinitializing
+        const updatedPieces = new Map(game.pieces); // Ensure proper Map type
+        const fromKey = `${from[0]}${from[1]}`;
+        const toKey = `${to[0]}${to[1]}`;
+        updatedPieces.set(toKey, updatedPieces.get(fromKey));
+        updatedPieces.delete(fromKey);
 
-          io.to(game.players.white.id).emit('gameState', {
-            fen: chess.getBoardState(),
-            turn: game.turn,
-            move: { from, to },
-            pieces: pieces,
-            piecePokemonMap: piecePokemonMap
-          });
-          io.to(game.players.black.id).emit('gameState', {
-            fen: chess.getBoardState(),
-            turn: game.turn,
-            move: { from, to },
-            pieces: pieces,
-            piecePokemonMap: piecePokemonMap
-          });
+        game.pieces = updatedPieces;
 
-          if (result.gameOver) {
-            io.to(game.players.white.id).emit('gameOver', { winner: result.winner });
-            io.to(game.players.black.id).emit('gameOver', { winner: result.winner });
-            console.log(`${result.winner} wins by capturing the king`);
-          }
+        await game.save();
 
-          return res.status(200).json({
-            pieces,
-            piecePokemonMap,
-            turn: game.turn,
-            gameOver: result.gameOver,
-            winner: result.winner
-          });
-        } else {
-          console.log('Invalid move:', result.error);
-          return res.status(400).json({ error: result.error });
+        console.log('Move made:', { from, to, fen: chess.getFen(), turn: game.turn });
+
+        io.to(game.players.white.id).emit('gameState', {
+          fen: chess.getBoardState(),
+          turn: game.turn,
+          move: { from, to },
+          pieces: Object.fromEntries(game.pieces), // Convert map to object for transmission
+          piecePokemonMap: Object.fromEntries(game.piecePokemonMap) // Convert map to object for transmission
+        });
+        io.to(game.players.black.id).emit('gameState', {
+          fen: chess.getBoardState(),
+          turn: game.turn,
+          move: { from, to },
+          pieces: Object.fromEntries(game.pieces), // Convert map to object for transmission
+          piecePokemonMap: Object.fromEntries(game.piecePokemonMap) // Convert map to object for transmission
+        });
+
+        if (result.gameOver) {
+          io.to(game.players.white.id).emit('gameOver', { winner: result.winner });
+          io.to(game.players.black.id).emit('gameOver', { winner: result.winner });
+          console.log(`${result.winner} wins by capturing the king`);
         }
+
+        return res.status(200).json({
+          pieces: Object.fromEntries(game.pieces), // Convert map to object for transmission
+          piecePokemonMap: Object.fromEntries(game.piecePokemonMap), // Convert map to object for transmission
+          turn: game.turn,
+          gameOver: result.gameOver,
+          winner: result.winner
+        });
       } else {
-        console.log('Game not found for move:', gameId);
-        return res.status(404).json({ error: 'Game not found' });
+        console.log('Invalid move:', result.error);
+        return res.status(400).json({ error: result.error });
       }
-    } catch (error) {
-      console.error(`Error processing move for gameId=${gameId}:`, error);
-      return res.status(500).json({ error: 'Failed to process move' });
+    } else {
+      console.log('Game not found for move:', gameId);
+      return res.status(404).json({ error: 'Game not found' });
     }
-  });
+  } catch (error) {
+    console.error(`Error processing move for gameId=${gameId}:`, error);
+    return res.status(500).json({ error: 'Failed to process move' });
+  }
+});
+
+
 
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);

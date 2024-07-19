@@ -42,6 +42,7 @@ const GameWrapper = ({
   const { gameId: paramGameId, username: paramUsername, color: paramColor } = useParams();
   const initialized = useRef(false);
   const [gameId, setGameId] = useState(paramGameId || null);
+  const [initialPiecePokemonMapSet, setInitialPiecePokemonMapSet] = useState(false);
 
   useEffect(() => {
     if (!initialized.current) {
@@ -67,7 +68,10 @@ const GameWrapper = ({
       const handleGameState = ({ fen, turn, pieces, piecePokemonMap }) => {
         console.log('Received game state:', { fen, turn, pieces, piecePokemonMap });
         setPieces(pieces || {});
-        setPiecePokemonMap(piecePokemonMap || {});
+        if (!initialPiecePokemonMapSet && piecePokemonMap) {
+          setPiecePokemonMap(piecePokemonMap);
+          setInitialPiecePokemonMapSet(true);
+        }
         setTurn(turn);
         console.log('Updated Pieces:', pieces);
         console.log('Updated Turn:', turn);
@@ -101,7 +105,7 @@ const GameWrapper = ({
         socket.off('gameOver', handleGameOver);
       };
     }
-  }, [socket, gameId, username, setPlayerColor, setGameOver, setPieces, setTurn, setPiecePokemonMap]);
+  }, [socket, gameId, username, setPlayerColor, setGameOver, setPieces, setTurn, setPiecePokemonMap, initialPiecePokemonMapSet]);
 
   useEffect(() => {
     console.log('playerColor state updated:', playerColor);
@@ -119,8 +123,8 @@ const GameWrapper = ({
     try {
       const response = await axios.post(`http://localhost:5000/api/move/${gameId}`, { from, to });
       setPieces(response.data.pieces);
-      setPiecePokemonMap(response.data.piecePokemonMap);
-      setTurn(response.data.turn); // Update the turn state
+      setPiecePokemonMap(response.data.piecePokemonMap);  // This should be avoided if you want to keep it constant
+      setTurn(response.data.turn);
       if (response.data.gameOver) {
         setGameOver(`${response.data.winner} wins by capturing the king!`);
       }
