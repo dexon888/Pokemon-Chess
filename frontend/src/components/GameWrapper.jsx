@@ -148,7 +148,6 @@ const GameWrapper = ({
           <Typography variant="h6">Loading pieces...</Typography>
         )}
       </BoardContainer>
-      <Button variant="contained" color="primary" onClick={restartGame}>Restart Game</Button>
     </GameContainer>
   );
 };
