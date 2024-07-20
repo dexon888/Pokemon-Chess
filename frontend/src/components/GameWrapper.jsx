@@ -133,10 +133,6 @@ const GameWrapper = ({
     }
   };
 
-  const emitTestEvent = () => {
-    console.log('Emitting test event');
-    socket.emit('testEvent', { message: 'Test event emitted' });
-  };
 
   return (
     <GameContainer maxWidth="md">
@@ -153,7 +149,6 @@ const GameWrapper = ({
         )}
       </BoardContainer>
       <Button variant="contained" color="primary" onClick={restartGame}>Restart Game</Button>
-      <Button variant="contained" color="secondary" onClick={emitTestEvent}>Emit Test Event</Button>
     </GameContainer>
   );
 };

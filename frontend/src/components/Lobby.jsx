@@ -30,17 +30,17 @@ const PlayerList = styled(List)({
   width: '100%',
   maxWidth: 360,
   backgroundColor: 'background.paper',
-  padding: 0, // Remove default padding
-  margin: 0,  // Remove default margin
+  padding: 0,
+  margin: 0,
 });
 
 const PlayerListItem = styled(ListItem)({
   backgroundColor: '#333',
   borderRadius: '5px',
   marginBottom: '10px',
-  padding: 0, // Remove default padding
+  padding: 0,
   '&:last-child': {
-    marginBottom: 0, // Ensure last item has no margin
+    marginBottom: 0,
   },
 });
 
@@ -56,7 +56,12 @@ const Lobby = ({ socket, setUsername }) => {
     });
 
     socket.on('receiveChallenge', ({ challenger }) => {
-      setChallenges((prev) => [...prev, challenger]);
+      setChallenges((prev) => {
+        if (!prev.find(challenge => challenge.id === challenger.id)) {
+          return [...prev, challenger];
+        }
+        return prev;
+      });
     });
 
     socket.on('startGame', ({ gameId, players, color }) => {
@@ -73,12 +78,14 @@ const Lobby = ({ socket, setUsername }) => {
   const handleJoinLobby = (username) => {
     const user = { id: socket.id, name: username };
     setLocalUsername(username);
-    setUsername(username); // Update the username in the App component
+    setUsername(username);
     socket.emit('joinLobby', user);
   };
 
   const handleChallengePlayer = (challengee) => {
-    socket.emit('challengePlayer', { challenger: { id: socket.id, name: username }, challengee });
+    if (!challenges.find(challenge => challenge.id === challengee.id)) {
+      socket.emit('challengePlayer', { challenger: { id: socket.id, name: username }, challengee });
+    }
   };
 
   const handleAcceptChallenge = (challenger) => {
