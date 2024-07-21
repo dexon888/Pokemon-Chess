@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Container, TextField, Button, Typography, List, ListItem, ListItemText } from '@mui/material';
 import { styled } from '@mui/system';
+import Logout from './Logout';
 
 const LobbyContainer = styled(Container)({
   backgroundColor: '#1d1d1d',
@@ -68,10 +69,15 @@ const Lobby = ({ socket, setUsername }) => {
       navigate(`/game/${gameId}/${username}/${color}`);
     });
 
+    socket.on('userLogout', ({ username: loggedOutUsername }) => {
+      setUsers((prevUsers) => prevUsers.filter((user) => user.name !== loggedOutUsername));
+    });
+
     return () => {
       socket.off('updateLobby');
       socket.off('receiveChallenge');
       socket.off('startGame');
+      socket.off('userLogout');
     };
   }, [socket, navigate, username]);
 
@@ -110,6 +116,7 @@ const Lobby = ({ socket, setUsername }) => {
     <LobbyContainer maxWidth="md">
       <Typography variant="h4" color="primary" mb={2}>Welcome to the Lobby, {username}</Typography>
       <Typography variant="h5" color="secondary" mb={2}>Online Players:</Typography>
+      <Logout socket={socket} username={username} />
       <PlayerList>
         {users.map((u) => (
           <PlayerListItem key={u.id}>

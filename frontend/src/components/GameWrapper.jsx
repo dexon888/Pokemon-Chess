@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import Board from './Board';
 import Logout from './Logout';
-import { Container, Typography, Button, Box } from '@mui/material';
+import { Container, Typography, Box } from '@mui/material';
 import { styled } from '@mui/system';
 import axios from 'axios';
+import PropTypes from 'prop-types';
 
 const GameContainer = styled(Container)({
   backgroundColor: '#1d1d1d',
@@ -37,17 +38,20 @@ const GameWrapper = ({
   turn,
   setTurn,
   username,
+  setUsername,
   setPiecePokemonMap
 }) => {
   const { gameId: paramGameId, username: paramUsername, color: paramColor } = useParams();
+  const navigate = useNavigate();
   const initialized = useRef(false);
   const [gameId, setGameId] = useState(paramGameId || null);
   const [initialPiecePokemonMapSet, setInitialPiecePokemonMapSet] = useState(false);
 
+  // Initialize state from URL params
   useEffect(() => {
     if (!initialized.current) {
       if (paramUsername) {
-        username = paramUsername;
+        setUsername(paramUsername);
         console.log(`Set username from params: ${paramUsername}`);
       }
       if (paramColor) {
@@ -56,8 +60,9 @@ const GameWrapper = ({
       }
       initialized.current = true;
     }
-  }, [paramUsername, username, paramColor, playerColor, setPlayerColor]);
+  }, [paramUsername, paramColor, setPlayerColor, setUsername]);
 
+  // Set up socket listeners
   useEffect(() => {
     if (socket && gameId) {
       console.log(`Setting up socket listeners for gameId=${gameId}, username=${username}`);
@@ -73,9 +78,6 @@ const GameWrapper = ({
           setInitialPiecePokemonMapSet(true);
         }
         setTurn(turn);
-        console.log('Updated Pieces:', pieces);
-        console.log('Updated Turn:', turn);
-        console.log('Updated Piece Pokemon Map:', piecePokemonMap);
       };
 
       const handlePlayerColor = (color) => {
@@ -92,10 +94,19 @@ const GameWrapper = ({
         setGameOver(`${winner} wins by capturing the king!`);
       };
 
+      const handleUserLogout = ({ username: loggedOutUsername }) => {
+        if (username === loggedOutUsername) {
+          navigate('/login');
+        } else {
+          navigate('/lobby');
+        }
+      };
+
       socket.on('gameState', handleGameState);
       socket.on('playerColor', handlePlayerColor);
       socket.on('invalidMove', handleInvalidMove);
       socket.on('gameOver', handleGameOver);
+      socket.on('userLogout', handleUserLogout);
 
       return () => {
         console.log('Cleaning up socket listeners');
@@ -103,14 +114,17 @@ const GameWrapper = ({
         socket.off('playerColor', handlePlayerColor);
         socket.off('invalidMove', handleInvalidMove);
         socket.off('gameOver', handleGameOver);
+        socket.off('userLogout', handleUserLogout);
       };
     }
-  }, [socket, gameId, username, setPlayerColor, setGameOver, setPieces, setTurn, setPiecePokemonMap, initialPiecePokemonMapSet]);
+  }, [socket, gameId, username, setPlayerColor, setGameOver, setPieces, setTurn, setPiecePokemonMap, initialPiecePokemonMapSet, navigate]);
 
+  // Log playerColor state updates
   useEffect(() => {
     console.log('playerColor state updated:', playerColor);
   }, [playerColor]);
 
+  // Handle piece movement
   const movePiece = async (fromX, fromY, toX, toY) => {
     if ((playerColor === 'white' && turn !== 'w') || (playerColor === 'black' && turn !== 'b')) {
       console.log('Not your turn!');
@@ -133,13 +147,12 @@ const GameWrapper = ({
     }
   };
 
-
   return (
     <GameContainer maxWidth="md">
       <Typography variant="h4">Pokémon Chess</Typography>
       <Typography variant="h6">Your color: {playerColor}</Typography>
       <Typography variant="h6">Current turn: {turn === 'w' ? 'White' : 'Black'}</Typography>
-      <Logout />
+      <Logout socket={socket} username={username} />
       {gameOver && <Typography variant="h6">{gameOver}</Typography>}
       <BoardContainer>
         {pieces && Object.keys(pieces).length > 0 ? (
@@ -150,6 +163,22 @@ const GameWrapper = ({
       </BoardContainer>
     </GameContainer>
   );
+};
+
+GameWrapper.propTypes = {
+  socket: PropTypes.object.isRequired,
+  pieces: PropTypes.object.isRequired,
+  setPieces: PropTypes.func.isRequired,
+  gameOver: PropTypes.string,
+  setGameOver: PropTypes.func.isRequired,
+  restartGame: PropTypes.func.isRequired,
+  playerColor: PropTypes.string.isRequired,
+  setPlayerColor: PropTypes.func.isRequired,
+  turn: PropTypes.string.isRequired,
+  setTurn: PropTypes.func.isRequired,
+  username: PropTypes.string.isRequired,
+  setUsername: PropTypes.func.isRequired,
+  setPiecePokemonMap: PropTypes.func.isRequired,
 };
 
 export default GameWrapper;

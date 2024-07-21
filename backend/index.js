@@ -199,11 +199,21 @@ io.on('connection', (socket) => {
 });
 
 
+  socket.on('userLogout', ({ username }) => {
+    // Remove user from the lobby and notify others
+    onlineUsers = onlineUsers.filter(user => user.name !== username);
+    io.emit('updateLobby', onlineUsers);
+    io.emit('userLogout', { username });
+  });
 
   socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id);
-    onlineUsers = onlineUsers.filter(user => user.id !== socket.id);
-    io.emit('updateLobby', onlineUsers);
+    // Handle user disconnection if necessary
+    const user = onlineUsers.find(user => user.id === socket.id);
+    if (user) {
+      onlineUsers = onlineUsers.filter(u => u.id !== socket.id);
+      io.emit('updateLobby', onlineUsers);
+      io.emit('userLogout', { username: user.name });
+    }
   });
 });
 

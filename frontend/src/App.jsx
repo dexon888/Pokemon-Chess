@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Route, Routes, Navigate } from 'react-router-dom';
-import GameWrapper from './components/GameWrapper.jsx';
+import GameWrapper from './components/GameWrapper';
 import io from 'socket.io-client';
 import './App.css';
 import Login from './components/Login';
@@ -26,6 +26,7 @@ const App = () => {
     const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
+      setUsername(user?.email || '');
       setLoading(false);
     };
     checkUser();
@@ -52,8 +53,6 @@ const App = () => {
           <ProtectedRoute>
             <GameWrapper
               socket={socket}
-              gameId={gameId}
-              setGameId={setGameId}
               pieces={pieces}
               setPieces={setPieces}
               gameOver={gameOver}
@@ -64,6 +63,7 @@ const App = () => {
               turn={turn}
               setTurn={setTurn}
               username={username}
+              setUsername={setUsername}
               piecePokemonMap={piecePokemonMap}
               setPiecePokemonMap={setPiecePokemonMap}
             />
