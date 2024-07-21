@@ -4,6 +4,7 @@ import { Container, TextField, Button, Typography, List, ListItem, ListItemText 
 import { styled } from '@mui/system';
 import Logout from './Logout';
 
+// Styles for the lobby components
 const LobbyContainer = styled(Container)({
   backgroundColor: '#1d1d1d',
   padding: '20px',
@@ -51,6 +52,7 @@ const Lobby = ({ socket, setUsername }) => {
   const [challenges, setChallenges] = useState([]);
   const navigate = useNavigate();
 
+  // Set up socket event listeners
   useEffect(() => {
     socket.on('updateLobby', (users) => {
       setUsers(users);
@@ -81,6 +83,7 @@ const Lobby = ({ socket, setUsername }) => {
     };
   }, [socket, navigate, username]);
 
+  // Handle user joining the lobby
   const handleJoinLobby = (username) => {
     const user = { id: socket.id, name: username };
     setLocalUsername(username);
@@ -88,12 +91,14 @@ const Lobby = ({ socket, setUsername }) => {
     socket.emit('joinLobby', user);
   };
 
+  // Handle challenging another player
   const handleChallengePlayer = (challengee) => {
     if (!challenges.find(challenge => challenge.id === challengee.id)) {
       socket.emit('challengePlayer', { challenger: { id: socket.id, name: username }, challengee });
     }
   };
 
+  // Handle accepting a challenge
   const handleAcceptChallenge = (challenger) => {
     socket.emit('acceptChallenge', { challenger, challengee: { id: socket.id, name: username } });
   };
