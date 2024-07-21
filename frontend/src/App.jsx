@@ -9,8 +9,7 @@ import Lobby from './components/Lobby';
 import ProtectedRoute from './components/ProtectedRoute';
 import { supabase } from './supabaseClient';
 
-// Update the WebSocket URL to your deployed backend URL
-const socket = io('https://pokemon-chess.onrender.com');
+const socket = io(process.env.REACT_APP_BACKEND_URL); // Use the environment variable here
 
 const App = () => {
   const [gameId, setGameId] = useState(null);

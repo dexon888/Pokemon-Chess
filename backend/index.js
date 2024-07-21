@@ -7,26 +7,27 @@ const CustomChess = require('./customChess');
 const Game = require('./models/Game');
 const axios = require('axios');
 const { initializePieces } = require('./utils');
+require('dotenv').config(); // Load environment variables from .env file
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: 'https://pokemon-chess-1.onrender.com',
+    origin: process.env.CORS_ORIGIN,
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type'],
     credentials: true,
   },
 });
 
-app.use(cors({ origin: 'https://pokemon-chess-1.onrender.com', methods: ['GET', 'POST'], allowedHeaders: ['Content-Type'] }));
+app.use(cors({ origin: process.env.CORS_ORIGIN, methods: ['GET', 'POST'], allowedHeaders: ['Content-Type'] }));
 app.use(express.json());
 
 app.get('/', (req, res) => {
   res.send('Server is running');
 });
 
-const dbURI = 'mongodb+srv://Wambink:hello@cluster0.stcst1u.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+const dbURI = process.env.MONGO_URI;
 mongoose.connect(dbURI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
