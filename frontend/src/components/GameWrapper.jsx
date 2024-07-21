@@ -3,10 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Board from './Board';
 import Logout from './Logout';
 import MessageBox from './MessageBox';
-import { Container, Typography, Box } from '@mui/material';
+import { Container, Typography, Box, Button } from '@mui/material';
 import { styled } from '@mui/system';
 import axios from 'axios';
 import PropTypes from 'prop-types';
+import TypeEmojiPopup from './TypeEmojiPopup';
 
 const GameContainer = styled(Container)({
   backgroundColor: '#1d1d1d',
@@ -48,6 +49,7 @@ const GameWrapper = ({
   const [gameId, setGameId] = useState(paramGameId || null);
   const [initialPiecePokemonMapSet, setInitialPiecePokemonMapSet] = useState(false);
   const [messages, setMessages] = useState([]);
+  const [isPopupVisible, setIsPopupVisible] = useState(false);
 
   // Initialize state from URL params
   useEffect(() => {
@@ -159,6 +161,9 @@ const GameWrapper = ({
     }
   };
 
+  const togglePopup = () => {
+    setIsPopupVisible(!isPopupVisible);
+  };
 
   return (
     <GameContainer maxWidth="md">
@@ -175,6 +180,15 @@ const GameWrapper = ({
         )}
       </BoardContainer>
       <MessageBox messages={messages} />
+      <Button
+        variant="contained"
+        color="primary"
+        onClick={togglePopup}
+        style={{ position: 'fixed', bottom: '10px', left: '10px', zIndex: 1000 }}
+      >
+        Show Type Emoji Mapping
+      </Button>
+      <TypeEmojiPopup isVisible={isPopupVisible} onClose={togglePopup} />
     </GameContainer>
   );
 };
