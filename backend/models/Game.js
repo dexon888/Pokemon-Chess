@@ -18,10 +18,12 @@ const gameSchema = new mongoose.Schema({
   updated_at: { type: Date, default: Date.now },
   players: {
     white: {
-      id: { type: String, required: false, default: null }
+      id: { type: String, required: false, default: null },
+      name: { type: String, required: false, default: null } // Added name field
     },
     black: {
-      id: { type: String, required: false, default: null }
+      id: { type: String, required: false, default: null },
+      name: { type: String, required: false, default: null } // Added name field
     }
   }
 });

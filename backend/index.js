@@ -53,7 +53,7 @@ io.on('connection', (socket) => {
     const gameId = Date.now().toString();
     const chess = new CustomChess();
     const players = Math.random() > 0.5 ? { white: challenger, black: challengee } : { white: challengee, black: challenger };
-    
+
     // Initialize pieces and piecePokemonMap
     const { pieces, piecePokemonMap } = await initializePieces(chess.getBoardState());
 
@@ -62,17 +62,18 @@ io.on('connection', (socket) => {
     try {
       await newGame.save();
       console.log(`Game created with players: ${JSON.stringify(players)}`);
-      io.to(challenger.id).emit('startGame', { gameId, players, color: players.white.id === challenger.id ? 'white' : 'black', fen: chess.getFen(), pieces, piecePokemonMap });
-      io.to(challengee.id).emit('startGame', { gameId, players, color: players.white.id === challengee.id ? 'white' : 'black', fen: chess.getFen(), pieces, piecePokemonMap });
+      const message = `${players.white.name} challenged ${players.black.name} to a Pokémon Battle!`;
+      console.log(`Emitting message to players: ${message}`);
+      io.to(players.white.id).emit('startGame', { gameId, players, color: 'white', fen: chess.getFen(), pieces, piecePokemonMap });
+      io.to(players.black.id).emit('startGame', { gameId, players, color: 'black', fen: chess.getFen(), pieces, piecePokemonMap });
+      io.to(players.white.id).emit('newMessage', message);
+      io.to(players.black.id).emit('newMessage', message);
     } catch (err) {
       console.error('Error creating new game:', err);
     }
   });
 
-
   socket.on('joinGame', async ({ gameId, username }) => {
-    console.log(`joinGame event received with gameId: ${gameId} and username: ${username}`);
-
     try {
       const game = await Game.findOne({ gameId });
       console.log('Game found:', game);
@@ -87,29 +88,18 @@ io.on('connection', (socket) => {
             game.players.white.name = username || '';
             await game.save();
             socket.emit('playerColor', 'white');
-            console.log(`Assigned white to ${socket.id}`);
           } else if (!game.players.black.id) {
             game.players.black.id = socket.id;
             game.players.black.name = username || '';
             await game.save();
             socket.emit('playerColor', 'black');
-            console.log(`Assigned black to ${socket.id}`);
           } else {
             socket.emit('playerColor', 'spectator');
-            console.log(`Client ${socket.id} is a spectator`);
           }
         } else {
           const color = isPlayerWhite ? 'white' : 'black';
           socket.emit('playerColor', color);
-          console.log(`Confirmed ${color} for ${socket.id}`);
         }
-
-        console.log('Emitting gameState event with:', {
-          fen: game.fen,
-          turn: game.turn,
-          pieces: game.pieces,
-          piecePokemonMap: game.piecePokemonMap
-        });
 
         socket.emit('gameState', {
           fen: game.fen,
@@ -117,6 +107,12 @@ io.on('connection', (socket) => {
           pieces: game.pieces,
           piecePokemonMap: game.piecePokemonMap
         });
+
+        if (game.players.white.name && game.players.black.name) {
+          const message = `${game.players.white.name} challenged ${game.players.black.name} to a Pokémon Battle!`;
+          io.to(game.players.white.id).emit('newMessage', message);
+          io.to(game.players.black.id).emit('newMessage', message);
+        }
       } else {
         console.log(`Game not found for ID: ${gameId}`);
       }
@@ -126,78 +122,77 @@ io.on('connection', (socket) => {
   });
 
   app.post('/api/move/:gameId', async (req, res) => {
-  const { gameId } = req.params;
-  const { from, to } = req.body;
+    const { gameId } = req.params;
+    const { from, to } = req.body;
 
-  console.log(`Move request received: gameId=${gameId}, from=${from}, to=${to}`);
-  try {
-    const game = await Game.findOne({ gameId });
-    if (game) {
-      const chess = new CustomChess();
-      chess.load(game.fen);
+    console.log(`Move request received: gameId=${gameId}, from=${from}, to=${to}`);
+    try {
+      const game = await Game.findOne({ gameId });
+      if (game) {
+        const chess = new CustomChess();
+        chess.load(game.fen);
 
-      const result = chess.move(from, to);
+        const result = chess.move(from, to);
 
-      if (result.valid) {
-        game.fen = chess.getFen();
-        game.updated_at = Date.now();
-        game.turn = game.turn === 'w' ? 'b' : 'w'; // Switch turn
+        if (result.valid) {
+          game.fen = chess.getFen();
+          game.updated_at = Date.now();
+          game.turn = game.turn === 'w' ? 'b' : 'w'; // Switch turn
 
-        // Update pieces based on new board state without reinitializing
-        const updatedPieces = new Map(game.pieces); // Ensure proper Map type
-        const fromKey = `${from[0]}${from[1]}`;
-        const toKey = `${to[0]}${to[1]}`;
-        updatedPieces.set(toKey, updatedPieces.get(fromKey));
-        updatedPieces.delete(fromKey);
+          // Update pieces based on new board state without reinitializing
+          const updatedPieces = new Map(game.pieces); // Ensure proper Map type
+          const fromKey = `${from[0]}${from[1]}`;
+          const toKey = `${to[0]}${to[1]}`;
+          updatedPieces.set(toKey, updatedPieces.get(fromKey));
+          updatedPieces.delete(fromKey);
 
-        game.pieces = updatedPieces;
+          game.pieces = updatedPieces;
 
-        await game.save();
+          await game.save();
 
-        console.log('Move made:', { from, to, fen: chess.getFen(), turn: game.turn });
+          console.log('Move made:', { from, to, fen: chess.getFen(), turn: game.turn });
 
-        io.to(game.players.white.id).emit('gameState', {
-          fen: chess.getBoardState(),
-          turn: game.turn,
-          move: { from, to },
-          pieces: Object.fromEntries(game.pieces), // Convert map to object for transmission
-          piecePokemonMap: Object.fromEntries(game.piecePokemonMap) // Convert map to object for transmission
-        });
-        io.to(game.players.black.id).emit('gameState', {
-          fen: chess.getBoardState(),
-          turn: game.turn,
-          move: { from, to },
-          pieces: Object.fromEntries(game.pieces), // Convert map to object for transmission
-          piecePokemonMap: Object.fromEntries(game.piecePokemonMap) // Convert map to object for transmission
-        });
+          io.to(game.players.white.id).emit('gameState', {
+            fen: chess.getBoardState(),
+            turn: game.turn,
+            move: { from, to },
+            pieces: Object.fromEntries(game.pieces), // Convert map to object for transmission
+            piecePokemonMap: Object.fromEntries(game.piecePokemonMap) // Convert map to object for transmission
+          });
+          io.to(game.players.black.id).emit('gameState', {
+            fen: chess.getBoardState(),
+            turn: game.turn,
+            move: { from, to },
+            pieces: Object.fromEntries(game.pieces), // Convert map to object for transmission
+            piecePokemonMap: Object.fromEntries(game.piecePokemonMap) // Convert map to object for transmission
+          });
 
-        if (result.gameOver) {
-          io.to(game.players.white.id).emit('gameOver', { winner: result.winner });
-          io.to(game.players.black.id).emit('gameOver', { winner: result.winner });
-          console.log(`${result.winner} wins by capturing the king`);
+          if (result.gameOver) {
+            io.to(game.players.white.id).emit('gameOver', { winner: result.winner });
+            io.to(game.players.black.id).emit('gameOver', { winner: result.winner });
+            console.log(`${result.winner} wins by capturing the king`);
+          }
+
+          return res.status(200).json({
+            pieces: Object.fromEntries(game.pieces), // Convert map to object for transmission
+            piecePokemonMap: Object.fromEntries(game.piecePokemonMap), // Convert map to object for transmission
+            turn: game.turn,
+            gameOver: result.gameOver,
+            winner: result.winner
+          });
+        } else {
+          console.log('Invalid move:', result.error);
+          return res.status(400).json({ error: result.error });
         }
-
-        return res.status(200).json({
-          pieces: Object.fromEntries(game.pieces), // Convert map to object for transmission
-          piecePokemonMap: Object.fromEntries(game.piecePokemonMap), // Convert map to object for transmission
-          turn: game.turn,
-          gameOver: result.gameOver,
-          winner: result.winner
-        });
       } else {
-        console.log('Invalid move:', result.error);
-        return res.status(400).json({ error: result.error });
+        console.log('Game not found for move:', gameId);
+        return res.status(404).json({ error: 'Game not found' });
       }
-    } else {
-      console.log('Game not found for move:', gameId);
-      return res.status(404).json({ error: 'Game not found' });
+    } catch (error) {
+      console.error(`Error processing move for gameId=${gameId}:`, error);
+      return res.status(500).json({ error: 'Failed to process move' });
     }
-  } catch (error) {
-    console.error(`Error processing move for gameId=${gameId}:`, error);
-    return res.status(500).json({ error: 'Failed to process move' });
-  }
-});
-
+  });
 
   socket.on('userLogout', ({ username }) => {
     // Remove user from the lobby and notify others

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Board from './Board';
 import Logout from './Logout';
+import MessageBox from './MessageBox';
 import { Container, Typography, Box } from '@mui/material';
 import { styled } from '@mui/system';
 import axios from 'axios';
@@ -46,6 +47,7 @@ const GameWrapper = ({
   const initialized = useRef(false);
   const [gameId, setGameId] = useState(paramGameId || null);
   const [initialPiecePokemonMapSet, setInitialPiecePokemonMapSet] = useState(false);
+  const [messages, setMessages] = useState([]);
 
   // Initialize state from URL params
   useEffect(() => {
@@ -64,12 +66,7 @@ const GameWrapper = ({
 
   // Set up socket listeners
   useEffect(() => {
-    if (socket && gameId) {
-      console.log(`Setting up socket listeners for gameId=${gameId}, username=${username}`);
-
-      socket.emit('joinGame', { gameId, username });
-      console.log('Emitting joinGame event:', { gameId, username });
-
+    if (socket) {
       const handleGameState = ({ fen, turn, pieces, piecePokemonMap }) => {
         console.log('Received game state:', { fen, turn, pieces, piecePokemonMap });
         setPieces(pieces || {});
@@ -102,11 +99,23 @@ const GameWrapper = ({
         }
       };
 
+      const handleNewMessage = (message) => {
+        console.log('Received newMessage:', message);
+        setMessages((prevMessages) => {
+          const updatedMessages = [...prevMessages];
+          if (!updatedMessages.includes(message)) {
+            updatedMessages.push(message);
+          }
+          return updatedMessages;
+        });
+      };
+
       socket.on('gameState', handleGameState);
       socket.on('playerColor', handlePlayerColor);
       socket.on('invalidMove', handleInvalidMove);
       socket.on('gameOver', handleGameOver);
       socket.on('userLogout', handleUserLogout);
+      socket.on('newMessage', handleNewMessage);
 
       return () => {
         console.log('Cleaning up socket listeners');
@@ -115,9 +124,18 @@ const GameWrapper = ({
         socket.off('invalidMove', handleInvalidMove);
         socket.off('gameOver', handleGameOver);
         socket.off('userLogout', handleUserLogout);
+        socket.off('newMessage', handleNewMessage);
       };
     }
-  }, [socket, gameId, username, setPlayerColor, setGameOver, setPieces, setTurn, setPiecePokemonMap, initialPiecePokemonMapSet, navigate]);
+  }, [socket, username, setPlayerColor, setGameOver, setPieces, setTurn, setPiecePokemonMap, initialPiecePokemonMapSet, navigate]);
+
+  useEffect(() => {
+    if (socket && gameId) {
+      console.log(`Setting up socket listeners for gameId=${gameId}, username=${username}`);
+      socket.emit('joinGame', { gameId, username });
+      console.log('Emitting joinGame event:', { gameId, username });
+    }
+  }, [socket, gameId, username]);
 
   // Log playerColor state updates
   useEffect(() => {
@@ -161,6 +179,7 @@ const GameWrapper = ({
           <Typography variant="h6">Loading pieces...</Typography>
         )}
       </BoardContainer>
+      <MessageBox messages={messages} />
     </GameContainer>
   );
 };
