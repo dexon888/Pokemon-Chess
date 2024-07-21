@@ -147,7 +147,8 @@ const GameWrapper = ({
     const to = [toX, toY];
 
     try {
-      const response = await axios.post(`http://localhost:5000/api/move/${gameId}`, { from, to });
+      // Update the URL to your deployed backend URL
+      const response = await axios.post(`https://pokemon-chess.onrender.com/api/move/${gameId}`, { from, to });
       setPieces(response.data.pieces);
       setPiecePokemonMap(response.data.piecePokemonMap);  // This should be avoided if you want to keep it constant
       setTurn(response.data.turn);

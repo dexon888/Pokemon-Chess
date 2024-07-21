@@ -9,7 +9,8 @@ import Lobby from './components/Lobby';
 import ProtectedRoute from './components/ProtectedRoute';
 import { supabase } from './supabaseClient';
 
-const socket = io('http://localhost:5000');
+// Update the WebSocket URL to your deployed backend URL
+const socket = io('https://pokemon-chess.onrender.com');
 
 const App = () => {
   const [gameId, setGameId] = useState(null);
