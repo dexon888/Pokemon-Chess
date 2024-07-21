@@ -34,6 +34,40 @@ mongoose.connect(dbURI, {
 
 let onlineUsers = [];
 
+// Type effectiveness functions
+const typeEffectiveness = {
+  normal: { superEffective: [], notVeryEffective: ['rock', 'steel'], immune: ['ghost'] },
+  fire: { superEffective: ['grass', 'ice', 'bug', 'steel'], notVeryEffective: ['fire', 'water', 'rock', 'dragon'], immune: [] },
+  water: { superEffective: ['fire', 'ground', 'rock'], notVeryEffective: ['water', 'grass', 'dragon'], immune: [] },
+  electric: { superEffective: ['water', 'flying'], notVeryEffective: ['electric', 'grass', 'dragon'], immune: ['ground'] },
+  grass: { superEffective: ['water', 'ground', 'rock'], notVeryEffective: ['fire', 'grass', 'poison', 'flying', 'bug', 'dragon', 'steel'], immune: [] },
+  ice: { superEffective: ['grass', 'ground', 'flying', 'dragon'], notVeryEffective: ['fire', 'water', 'ice', 'steel'], immune: [] },
+  fighting: { superEffective: ['normal', 'ice', 'rock', 'dark', 'steel'], notVeryEffective: ['poison', 'flying', 'psychic', 'bug', 'fairy'], immune: ['ghost'] },
+  poison: { superEffective: ['grass', 'fairy'], notVeryEffective: ['poison', 'ground', 'rock', 'ghost'], immune: ['steel'] },
+  ground: { superEffective: ['fire', 'electric', 'poison', 'rock', 'steel'], notVeryEffective: ['grass', 'bug'], immune: ['flying'] },
+  flying: { superEffective: ['grass', 'fighting', 'bug'], notVeryEffective: ['electric', 'rock', 'steel'], immune: ['ground'] },
+  psychic: { superEffective: ['fighting', 'poison'], notVeryEffective: ['psychic', 'steel'], immune: ['dark'] },
+  bug: { superEffective: ['grass', 'psychic', 'dark'], notVeryEffective: ['fire', 'fighting', 'poison', 'flying', 'ghost', 'steel', 'fairy'], immune: [] },
+  rock: { superEffective: ['fire', 'ice', 'flying', 'bug'], notVeryEffective: ['fighting', 'ground', 'steel'], immune: [] },
+  ghost: { superEffective: ['psychic', 'ghost'], notVeryEffective: ['dark'], immune: ['normal'] },
+  dragon: { superEffective: ['dragon'], notVeryEffective: ['steel'], immune: ['fairy'] },
+  dark: { superEffective: ['psychic', 'ghost'], notVeryEffective: ['fighting', 'dark', 'fairy'], immune: [] },
+  steel: { superEffective: ['ice', 'rock', 'fairy'], notVeryEffective: ['fire', 'water', 'electric', 'steel'], immune: ['poison'] },
+  fairy: { superEffective: ['fighting', 'dragon', 'dark'], notVeryEffective: ['fire', 'poison', 'steel'], immune: ['dragon'] },
+};
+
+const isSuperEffective = (attackingType, defendingType) => {
+  return typeEffectiveness[attackingType]?.superEffective.includes(defendingType);
+};
+
+const isNotVeryEffective = (attackingType, defendingType) => {
+  return typeEffectiveness[attackingType]?.notVeryEffective.includes(defendingType);
+};
+
+const isNeutral = (attackingType, defendingType) => {
+  return !isSuperEffective(attackingType, defendingType) && !isNotVeryEffective(attackingType, defendingType);
+};
+
 io.on('connection', (socket) => {
   console.log('New client connected:', socket.id);
 
@@ -73,10 +107,11 @@ io.on('connection', (socket) => {
     }
   });
 
+
   socket.on('joinGame', async ({ gameId, username }) => {
+
     try {
       const game = await Game.findOne({ gameId });
-      console.log('Game found:', game);
 
       if (game) {
         const isPlayerWhite = game.players.white.id === socket.id;
@@ -108,11 +143,10 @@ io.on('connection', (socket) => {
           piecePokemonMap: game.piecePokemonMap
         });
 
-        if (game.players.white.name && game.players.black.name) {
-          const message = `${game.players.white.name} challenged ${game.players.black.name} to a Pokémon Battle!`;
-          io.to(game.players.white.id).emit('newMessage', message);
-          io.to(game.players.black.id).emit('newMessage', message);
-        }
+        const whitePlayer = game.players.white.name;
+        const blackPlayer = game.players.black.name;
+        const message = `${whitePlayer} challenged ${blackPlayer} to a Pokémon Battle!`;
+        io.to(socket.id).emit('newMessage', message);
       } else {
         console.log(`Game not found for ID: ${gameId}`);
       }
@@ -120,6 +154,10 @@ io.on('connection', (socket) => {
       console.error(`Error finding game with ID: ${gameId}`, error);
     }
   });
+
+  const capitalizeFirstLetter = (string) => {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+  };
 
   app.post('/api/move/:gameId', async (req, res) => {
     const { gameId } = req.params;
@@ -132,19 +170,50 @@ io.on('connection', (socket) => {
         const chess = new CustomChess();
         chess.load(game.fen);
 
-        const result = chess.move(from, to);
+        const result = chess.move(from, to, game.piecePokemonMap);
 
         if (result.valid) {
           game.fen = chess.getFen();
           game.updated_at = Date.now();
-          game.turn = game.turn === 'w' ? 'b' : 'w'; // Switch turn
+          game.turn = chess.getTurn(); // Switch turn
 
           // Update pieces based on new board state without reinitializing
           const updatedPieces = new Map(game.pieces); // Ensure proper Map type
           const fromKey = `${from[0]}${from[1]}`;
           const toKey = `${to[0]}${to[1]}`;
-          updatedPieces.set(toKey, updatedPieces.get(fromKey));
+
+          // Handle piece movement
+          const attackingPiece = updatedPieces.get(fromKey);
+          const defendingPiece = updatedPieces.get(toKey);
+          const attackingPlayer = game.players[attackingPiece.color === 'white' ? 'white' : 'black'];
+          const defendingPlayer = game.players[defendingPiece?.color === 'white' ? 'white' : 'black'];
+
+          const attackingPokemon = capitalizeFirstLetter(attackingPiece.pokemon);
+          const defendingPokemon = defendingPiece ? capitalizeFirstLetter(defendingPiece.pokemon) : null;
+
+          updatedPieces.set(toKey, attackingPiece);
           updatedPieces.delete(fromKey);
+
+          if (defendingPiece) {
+            if (isSuperEffective(attackingPiece.pokemonType, defendingPiece.pokemonType)) {
+              updatedPieces.set(toKey, attackingPiece);
+              updatedPieces.delete(fromKey);
+              io.to(game.players.white.id).emit('newMessage', `${attackingPlayer.name}'s ${attackingPokemon} attacked ${defendingPlayer.name}'s ${defendingPokemon}`);
+              io.to(game.players.black.id).emit('newMessage', `${attackingPlayer.name}'s ${attackingPokemon} attacked ${defendingPlayer.name}'s ${defendingPokemon}`);
+              io.to(game.players.white.id).emit('newMessage', `${defendingPlayer.name}'s ${defendingPokemon} fainted`);
+              io.to(game.players.black.id).emit('newMessage', `${defendingPlayer.name}'s ${defendingPokemon} fainted`);
+            } else if (isNotVeryEffective(attackingPiece.pokemonType, defendingPiece.pokemonType) || isNeutral(attackingPiece.pokemonType, defendingPiece.pokemonType)) {
+              updatedPieces.delete(fromKey);
+              updatedPieces.delete(toKey);
+              io.to(game.players.white.id).emit('newMessage', `${attackingPlayer.name}'s ${attackingPokemon} attacked ${defendingPlayer.name}'s ${defendingPokemon}`);
+              io.to(game.players.black.id).emit('newMessage', `${attackingPlayer.name}'s ${attackingPokemon} attacked ${defendingPlayer.name}'s ${defendingPokemon}`);
+              io.to(game.players.white.id).emit('newMessage', `Both fainted`);
+              io.to(game.players.black.id).emit('newMessage', `Both fainted`);
+            }
+          } else {
+            updatedPieces.set(toKey, attackingPiece);
+            updatedPieces.delete(fromKey);
+          }
 
           game.pieces = updatedPieces;
 

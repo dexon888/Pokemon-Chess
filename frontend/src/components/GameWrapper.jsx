@@ -101,13 +101,7 @@ const GameWrapper = ({
 
       const handleNewMessage = (message) => {
         console.log('Received newMessage:', message);
-        setMessages((prevMessages) => {
-          const updatedMessages = [...prevMessages];
-          if (!updatedMessages.includes(message)) {
-            updatedMessages.push(message);
-          }
-          return updatedMessages;
-        });
+        setMessages((prevMessages) => [...prevMessages, message]);
       };
 
       socket.on('gameState', handleGameState);

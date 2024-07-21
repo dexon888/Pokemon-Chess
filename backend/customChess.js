@@ -99,7 +99,7 @@ class CustomChess {
     this.turn = turn === 'white' ? 'w' : 'b';
   }
 
-  move(from, to) {
+  move(from, to, piecePokemonMap) {
     const [fromX, fromY] = from;
     const [toX, toY] = to;
     const piece = this.board[fromY][fromX];
@@ -111,8 +111,8 @@ class CustomChess {
       return { valid: false, error: 'Invalid move' };
     }
 
-    const attackingType = piece.pokemonType; // Assuming piece object has pokemonType
-    const defendingType = target?.pokemonType; // Assuming target object has pokemonType
+    const attackingType = piecePokemonMap.get(`${fromX}${fromY}`)?.pokemonType;
+    const defendingType = piecePokemonMap.get(`${toX}${toY}`)?.pokemonType;
 
     if (target) {
       if (isSuperEffective(attackingType, defendingType)) {
