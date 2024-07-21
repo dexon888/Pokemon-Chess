@@ -6,7 +6,7 @@ const cors = require('cors');
 const CustomChess = require('./customChess');
 const Game = require('./models/Game');
 const axios = require('axios');
-const { initializePieces } = require('../frontend/src/utils');
+const { initializePieces } = require('./utils');
 
 const app = express();
 const server = http.createServer(app);
