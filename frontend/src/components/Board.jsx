@@ -31,6 +31,7 @@ const Board = ({ pieces, movePiece, playerColor }) => {
               color={piece.color}
               pokemon={piece.pokemon}
               sprite={piece.sprite}
+              pokemonType={piece.pokemonType} // Pass the pokemonType prop
               x={x}
               y={y}
               movePiece={movePiece}

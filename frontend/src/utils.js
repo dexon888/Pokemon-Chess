@@ -29,13 +29,13 @@ const fetchPokemonSprite = async (pokemon) => {
   }
 };
 
-const getPokemonType = async (pokemon) => {
+const getPokemonTypes = async (pokemon) => {
   try {
     const response = await axios.get(`${POKEMON_API_URL}/${pokemon}`);
-    return response.data.types[0].type.name;
+    return response.data.types.map(typeInfo => typeInfo.type.name);
   } catch (error) {
     console.error(`Error fetching type for ${pokemon}:`, error);
-    return 'normal';
+    return ['normal'];
   }
 };
 
@@ -62,7 +62,8 @@ const initializePieces = async (board, existingPiecePokemonMap = null) => {
         const pieceType = piece.toLowerCase();
         const pokemon = piecePokemonMap[pieceType];
         const sprite = await fetchPokemonSprite(pokemon);
-        const pokemonType = await getPokemonType(pokemon);
+        const pokemonTypes = await getPokemonTypes(pokemon);
+        const pokemonType = pokemonTypes[Math.floor(Math.random() * pokemonTypes.length)]; // Select one type if dual-type
 
         pieces[`${x}${y}`] = {
           type: pieceType,

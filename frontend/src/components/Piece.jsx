@@ -1,8 +1,9 @@
 import React from 'react';
 import { useDrag } from 'react-dnd';
 import { ItemTypes } from '../constants';
+import typeEmojis from '../typeEmojis';
 
-const Piece = ({ type, color, pokemon, sprite, x, y, movePiece }) => {
+const Piece = ({ type, color, pokemon, sprite, x, y, movePiece, pokemonType }) => {
   const [{ isDragging }, drag] = useDrag({
     type: ItemTypes.PIECE,
     item: { type, x, y },
@@ -19,6 +20,7 @@ const Piece = ({ type, color, pokemon, sprite, x, y, movePiece }) => {
 
   const pieceColor = color === 'white' ? 'white' : 'black';
   const chessPiece = `/chess-pieces/${pieceColor}-${type}.png`;
+  const typeEmoji = typeEmojis[pokemonType];
 
   return (
     <div
@@ -28,6 +30,7 @@ const Piece = ({ type, color, pokemon, sprite, x, y, movePiece }) => {
         width: '100%',
         height: '100%',
         opacity: isDragging ? 0.5 : 1,
+        textAlign: 'center',
       }}
     >
       <img
@@ -49,11 +52,23 @@ const Piece = ({ type, color, pokemon, sprite, x, y, movePiece }) => {
           width: '50%',
           height: '50%',
           position: 'absolute',
-          top: '25%',
+          top: '20%',
           left: '25%',
           zIndex: 2,
         }}
       />
+      <div
+        style={{
+          position: 'absolute',
+          bottom: '5%', // Adjust the vertical position
+          left: '50%',
+          transform: 'translateX(-50%)',
+          fontSize: '18px', // Adjust the font size
+          zIndex: 3, // Ensure emoji is on top
+        }}
+      >
+        {typeEmoji}
+      </div>
     </div>
   );
 };
