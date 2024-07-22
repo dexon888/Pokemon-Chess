@@ -3,7 +3,7 @@ import { Box, Typography, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { styled } from '@mui/system';
 
-const PopupContainer = styled(Box)(({ theme, isVisible }) => ({
+const PopupContainer = styled(Box)(({ isVisible }) => ({
   position: 'fixed',
   bottom: isVisible ? '10px' : '-100%',
   left: '10px',

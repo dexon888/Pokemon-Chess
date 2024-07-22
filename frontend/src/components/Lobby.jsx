@@ -9,11 +9,13 @@ const LobbyContainer = styled(Container)({
   backgroundColor: '#1d1d1d',
   padding: '20px',
   borderRadius: '10px',
-  minHeight: '50vh',
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
   justifyContent: 'center',
+  maxWidth: '400px',
+  margin: 'auto',
+  boxShadow: '0 0 10px rgba(0, 0, 0, 0.5)',
 });
 
 const UsernameInput = styled(TextField)({
@@ -30,17 +32,18 @@ const UsernameInput = styled(TextField)({
 
 const PlayerList = styled(List)({
   width: '100%',
-  maxWidth: 360,
   backgroundColor: 'background.paper',
   padding: 0,
   margin: 0,
+  overflow: 'auto',
+  maxHeight: '200px',
 });
 
 const PlayerListItem = styled(ListItem)({
   backgroundColor: '#333',
   borderRadius: '5px',
   marginBottom: '10px',
-  padding: 0,
+  padding: '10px',
   '&:last-child': {
     marginBottom: 0,
   },

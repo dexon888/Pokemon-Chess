@@ -3,11 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Board from './Board';
 import Logout from './Logout';
 import MessageBox from './MessageBox';
+import TypeEmojiPopup from './TypeEmojiPopup'; // Import the TypeEmojiPopup component
 import { Container, Typography, Box, Button } from '@mui/material';
 import { styled } from '@mui/system';
 import axios from 'axios';
 import PropTypes from 'prop-types';
-import TypeEmojiPopup from './TypeEmojiPopup';
 
 const GameContainer = styled(Container)({
   backgroundColor: '#1d1d1d',
@@ -28,6 +28,22 @@ const BoardContainer = styled(Box)({
   margin: '20px 0',
 });
 
+const StyledTypography = styled(Typography)({
+  fontSize: '48px',
+  color: '#ffcb05',
+  textShadow: '2px 2px 4px #3b4cca',
+  fontWeight: 'bold',
+});
+
+const InteractiveText = styled(Typography)({
+  fontSize: '24px',
+  color: (props) => (props.color === 'white' ? '#FFFFFF' : '#000000'),
+  backgroundColor: (props) => (props.color === 'white' ? '#000000' : '#FFFFFF'),
+  padding: '5px 10px',
+  borderRadius: '5px',
+  margin: '10px 0',
+});
+
 const GameWrapper = ({
   socket,
   pieces,
@@ -41,7 +57,7 @@ const GameWrapper = ({
   setTurn,
   username,
   setUsername,
-  setPiecePokemonMap
+  setPiecePokemonMap,
 }) => {
   const { gameId: paramGameId, username: paramUsername, color: paramColor } = useParams();
   const navigate = useNavigate();
@@ -49,7 +65,7 @@ const GameWrapper = ({
   const [gameId, setGameId] = useState(paramGameId || null);
   const [initialPiecePokemonMapSet, setInitialPiecePokemonMapSet] = useState(false);
   const [messages, setMessages] = useState([]);
-  const [isPopupVisible, setIsPopupVisible] = useState(false);
+  const [popupVisible, setPopupVisible] = useState(false); // State to manage popup visibility
 
   // Initialize state from URL params
   useEffect(() => {
@@ -151,7 +167,7 @@ const GameWrapper = ({
     try {
       const response = await axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/move/${gameId}`, { from, to });
       setPieces(response.data.pieces);
-      setPiecePokemonMap(response.data.piecePokemonMap);  // This should be avoided if you want to keep it constant
+      setPiecePokemonMap(response.data.piecePokemonMap); // This should be avoided if you want to keep it constant
       setTurn(response.data.turn);
       if (response.data.gameOver) {
         setGameOver(`${response.data.winner} wins by capturing the king!`);
@@ -161,15 +177,11 @@ const GameWrapper = ({
     }
   };
 
-  const togglePopup = () => {
-    setIsPopupVisible(!isPopupVisible);
-  };
-
   return (
     <GameContainer maxWidth="md">
-      <Typography variant="h4">Pokémon Chess</Typography>
-      <Typography variant="h6">Your color: {playerColor}</Typography>
-      <Typography variant="h6">Current turn: {turn === 'w' ? 'White' : 'Black'}</Typography>
+      <StyledTypography variant="h3" mb={2}>Pokémon Chess</StyledTypography>
+      <InteractiveText variant="h6" color={playerColor}>Your color: {playerColor}</InteractiveText>
+      <InteractiveText variant="h6" color={turn === 'w' ? 'white' : 'black'}>Current turn: {turn === 'w' ? 'White' : 'Black'}</InteractiveText>
       <Logout socket={socket} username={username} />
       {gameOver && <Typography variant="h6">{gameOver}</Typography>}
       <BoardContainer>
@@ -183,12 +195,12 @@ const GameWrapper = ({
       <Button
         variant="contained"
         color="primary"
-        onClick={togglePopup}
-        style={{ position: 'fixed', bottom: '10px', left: '10px', zIndex: 1000 }}
+        onClick={() => setPopupVisible(true)}
+        sx={{ position: 'fixed', bottom: '10px', left: '10px', zIndex: 1000 }}
       >
-        Show Type Emoji Mapping
+        Show Type Emojis
       </Button>
-      <TypeEmojiPopup isVisible={isPopupVisible} onClose={togglePopup} />
+      <TypeEmojiPopup isVisible={popupVisible} onClose={() => setPopupVisible(false)} /> {/* Add the TypeEmojiPopup component here */}
     </GameContainer>
   );
 };

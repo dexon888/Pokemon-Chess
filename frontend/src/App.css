@@ -36,3 +36,18 @@
     transform: rotate(360deg);
   }
 }
+
+body {
+  background-color: #1d1d1d;
+  /* Match the container's background color */
+  margin: 0;
+  padding: 0;
+  font-family: 'Roboto', sans-serif;
+  /* Ensure consistent font styling */
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
