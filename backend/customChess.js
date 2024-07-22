@@ -46,6 +46,8 @@ class CustomChess {
     this.turn = 'w'; // White to move first
     this.gameOver = false;
     this.winner = null;
+    this.castlingRights = { K: true, Q: true, k: true, q: true }; // Castling rights
+    this.enPassantTarget = null; // En passant target
   }
 
   load(fen) {
@@ -65,6 +67,17 @@ class CustomChess {
       return expandedRow;
     });
     this.turn = parts[1] === 'w' ? 'w' : 'b';
+    this.castlingRights = this.parseCastlingRights(parts[2]);
+    this.enPassantTarget = parts[3] === '-' ? null : parts[3];
+  }
+
+  parseCastlingRights(castling) {
+    return {
+      K: castling.includes('K'),
+      Q: castling.includes('Q'),
+      k: castling.includes('k'),
+      q: castling.includes('q'),
+    };
   }
 
   getFen() {
@@ -84,7 +97,9 @@ class CustomChess {
         }
       }).join('') + (empty > 0 ? empty : '');
     }).join('/');
-    return `${rows} ${this.turn} - - 0 1`;
+    const castling = `${this.castlingRights.K ? 'K' : ''}${this.castlingRights.Q ? 'Q' : ''}${this.castlingRights.k ? 'k' : ''}${this.castlingRights.q ? 'q' : ''}` || '-';
+    const enPassant = this.enPassantTarget ? this.enPassantTarget : '-';
+    return `${rows} ${this.turn} ${castling} ${enPassant} 0 1`;
   }
 
   isWhite(piece) {
@@ -125,6 +140,36 @@ class CustomChess {
     } else {
       this.board[toY][toX] = piece;
       this.board[fromY][fromX] = null;
+    }
+
+    // Handle pawn promotion
+    if (piece.toLowerCase() === 'p' && (toY === 0 || toY === 7)) {
+      this.board[toY][toX] = this.isWhite(piece) ? 'Q' : 'q'; // Promote to Queen for simplicity
+    }
+
+    // Handle castling
+    if (piece.toLowerCase() === 'k' && Math.abs(fromX - toX) === 2) {
+      if (toX === 6) { // Kingside castling
+        this.board[toY][5] = this.board[toY][7];
+        this.board[toY][7] = null;
+      } else if (toX === 2) { // Queenside castling
+        this.board[toY][3] = this.board[toY][0];
+        this.board[toY][0] = null;
+      }
+    }
+
+    // Update castling rights
+    if (piece.toLowerCase() === 'k') {
+      if (this.isWhite(piece)) {
+        this.castlingRights.K = this.castlingRights.Q = false;
+      } else {
+        this.castlingRights.k = this.castlingRights.q = false;
+      }
+    } else if (piece.toLowerCase() === 'r') {
+      if (fromX === 0 && fromY === 7) this.castlingRights.Q = false;
+      if (fromX === 7 && fromY === 7) this.castlingRights.K = false;
+      if (fromX === 0 && fromY === 0) this.castlingRights.q = false;
+      if (fromX === 7 && fromY === 0) this.castlingRights.k = false;
     }
 
     if (target && target.toLowerCase() === 'k') {
