@@ -239,10 +239,15 @@ io.on('connection', (socket) => {
           });
 
           if (result.gameOver) {
-            io.to(game.players.white.id).emit('gameOver', { winner: result.winner });
-            io.to(game.players.black.id).emit('gameOver', { winner: result.winner });
-            console.log(`${result.winner} wins by capturing the king`);
-          }
+          const winner = game.players[result.winner === 'w' ? 'black' : 'white'].name;
+          const loser = game.players[result.winner === 'w' ? 'white' : 'black'].name;
+          const victoryMessage = `${winner} has defeated ${loser}`;
+          io.to(game.players.white.id).emit('gameOver', { winner: result.winner });
+          io.to(game.players.black.id).emit('gameOver', { winner: result.winner });
+          io.to(game.players.white.id).emit('newMessage', victoryMessage);
+          io.to(game.players.black.id).emit('newMessage', victoryMessage);
+          console.log(`${result.winner} wins by capturing the king`);
+        }
 
           return res.status(200).json({
             pieces: Object.fromEntries(game.pieces), // Convert map to object for transmission

@@ -6,7 +6,7 @@ import MessageBox from './MessageBox';
 import TypeEmojiPopup from './TypeEmojiPopup';
 import RosterPopup from './RosterPopup'; // Import the RosterPopup component
 import { Container, Typography, Box, Button } from '@mui/material';
-import { styled } from '@mui/system';
+import { styled, keyframes } from '@mui/system';
 import axios from 'axios';
 import PropTypes from 'prop-types';
 
@@ -29,6 +29,7 @@ const BoardContainer = styled(Box)({
   margin: '20px 0',
 });
 
+
 const StyledTypography = styled(Typography)({
   fontSize: '48px',
   color: '#ffcb05',
@@ -36,13 +37,30 @@ const StyledTypography = styled(Typography)({
   fontWeight: 'bold',
 });
 
-const InteractiveText = styled(Typography)({
-  fontSize: '24px',
-  color: (props) => (props.color === 'white' ? '#FFFFFF' : '#000000'),
-  backgroundColor: (props) => (props.color === 'white' ? '#000000' : '#FFFFFF'),
-  padding: '5px 10px',
-  borderRadius: '5px',
+
+const InteractiveText = styled(Typography)(({ colorType }) => ({
+  fontSize: '18px', // Reduced font size
+  color: colorType === 'white' ? '#FFFFFF' : '#000000',
+  backgroundColor: colorType === 'white' ? '#000000' : '#FFFFFF',
+  padding: '5px 10px', // Reduced padding
+  borderRadius: '5px', // Reduced border radius
   margin: '10px 0',
+  border: `2px solid ${colorType === 'white' ? '#FFFFFF' : '#000000'}`,
+  textAlign: 'center',
+  fontWeight: 'bold',
+  textTransform: 'uppercase',
+}));
+
+const VictoryText = styled(Typography)({
+  fontSize: '22px', // Reduced font size
+  color: '#00FF00',
+  backgroundColor: '#000000',
+  padding: '10px 20px', // Reduced padding
+  borderRadius: '5px', // Reduced border radius
+  border: '2px solid #00FF00',
+  textAlign: 'center',
+  fontWeight: 'bold',
+  textTransform: 'uppercase',
 });
 
 const GameWrapper = ({
@@ -58,7 +76,7 @@ const GameWrapper = ({
   setTurn,
   username,
   setUsername,
-  piecePokemonMap, // Ensure piecePokemonMap is passed as a prop
+  piecePokemonMap = {}, // Ensure piecePokemonMap has a default value
   setPiecePokemonMap,
 }) => {
   const { gameId: paramGameId, username: paramUsername, color: paramColor } = useParams();
@@ -183,10 +201,10 @@ const GameWrapper = ({
   return (
     <GameContainer maxWidth="md">
       <StyledTypography variant="h3" mb={2}>Pokémon Chess</StyledTypography>
-      <InteractiveText variant="h6" color={playerColor}>Your color: {playerColor}</InteractiveText>
-      <InteractiveText variant="h6" color={turn === 'w' ? 'white' : 'black'}>Current turn: {turn === 'w' ? 'White' : 'Black'}</InteractiveText>
+      <InteractiveText variant="h6" colorType={playerColor}>Your color: {playerColor}</InteractiveText>
+      <InteractiveText variant="h6" colorType={turn === 'w' ? 'white' : 'black'}>Current turn: {turn === 'w' ? 'White' : 'Black'}</InteractiveText>
       <Logout socket={socket} username={username} />
-      {gameOver && <Typography variant="h6">{gameOver}</Typography>}
+      {gameOver && <VictoryText variant="h6">{gameOver}</VictoryText>}
       <BoardContainer>
         {pieces && Object.keys(pieces).length > 0 ? (
           <Board pieces={pieces} movePiece={movePiece} playerColor={playerColor} />
