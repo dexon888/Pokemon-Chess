@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Board from './Board';
 import Logout from './Logout';
 import MessageBox from './MessageBox';
-import TypeEmojiPopup from './TypeEmojiPopup'; // Import the TypeEmojiPopup component
+import TypeEmojiPopup from './TypeEmojiPopup';
+import RosterPopup from './RosterPopup'; // Import the RosterPopup component
 import { Container, Typography, Box, Button } from '@mui/material';
 import { styled } from '@mui/system';
 import axios from 'axios';
@@ -57,6 +58,7 @@ const GameWrapper = ({
   setTurn,
   username,
   setUsername,
+  piecePokemonMap, // Ensure piecePokemonMap is passed as a prop
   setPiecePokemonMap,
 }) => {
   const { gameId: paramGameId, username: paramUsername, color: paramColor } = useParams();
@@ -65,7 +67,8 @@ const GameWrapper = ({
   const [gameId, setGameId] = useState(paramGameId || null);
   const [initialPiecePokemonMapSet, setInitialPiecePokemonMapSet] = useState(false);
   const [messages, setMessages] = useState([]);
-  const [popupVisible, setPopupVisible] = useState(false); // State to manage popup visibility
+  const [typePopupVisible, setTypePopupVisible] = useState(false); // State to manage type popup visibility
+  const [rosterPopupVisible, setRosterPopupVisible] = useState(false); // State to manage roster popup visibility
 
   // Initialize state from URL params
   useEffect(() => {
@@ -195,12 +198,21 @@ const GameWrapper = ({
       <Button
         variant="contained"
         color="primary"
-        onClick={() => setPopupVisible(true)}
+        onClick={() => setTypePopupVisible(true)}
         sx={{ position: 'fixed', bottom: '10px', left: '10px', zIndex: 1000 }}
       >
         Show Type Emojis
       </Button>
-      <TypeEmojiPopup isVisible={popupVisible} onClose={() => setPopupVisible(false)} /> {/* Add the TypeEmojiPopup component here */}
+      <Button
+        variant="contained"
+        color="primary"
+        onClick={() => setRosterPopupVisible(true)}
+        sx={{ position: 'fixed', bottom: '10px', right: '10px', zIndex: 1000 }}
+      >
+        Show Roster
+      </Button>
+      <TypeEmojiPopup isVisible={typePopupVisible} onClose={() => setTypePopupVisible(false)} />
+      <RosterPopup isVisible={rosterPopupVisible} onClose={() => setRosterPopupVisible(false)} piecePokemonMap={piecePokemonMap} pieces={pieces} />
     </GameContainer>
   );
 };
@@ -218,6 +230,7 @@ GameWrapper.propTypes = {
   setTurn: PropTypes.func.isRequired,
   username: PropTypes.string.isRequired,
   setUsername: PropTypes.func.isRequired,
+  piecePokemonMap: PropTypes.object.isRequired, // Ensure piecePokemonMap is required
   setPiecePokemonMap: PropTypes.func.isRequired,
 };
 
