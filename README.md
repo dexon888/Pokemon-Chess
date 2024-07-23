@@ -1,5 +1,7 @@
 # Pokémon Chess
 
+[Deployed Application](https://pokemon-chess-1.onrender.com/)
+
 Pokémon Chess is a unique chess game where each chess piece represents a Pokémon. The game introduces an extra layer of strategy by incorporating Pokémon type effectiveness, allowing players to utilize super-effective moves for additional advantages.
 
 ## Table of Contents
@@ -25,6 +27,7 @@ Pokémon Chess is a unique chess game where each chess piece represents a Pokém
 - Node.js
 - MongoDB
 - npm or yarn
+- React.js
 
 ### Installation
 
