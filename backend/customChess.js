@@ -129,10 +129,13 @@ class CustomChess {
     const attackingType = piecePokemonMap.get(`${fromX}${fromY}`)?.pokemonType;
     const defendingType = piecePokemonMap.get(`${toX}${toY}`)?.pokemonType;
 
+    let superEffectiveMove = false;
+
     if (target) {
       if (isSuperEffective(attackingType, defendingType)) {
         this.board[toY][toX] = piece;
         this.board[fromY][fromX] = null;
+        superEffectiveMove = true;
       } else if (isNotVeryEffective(attackingType, defendingType) || isNeutral(attackingType, defendingType)) {
         this.board[toY][toX] = null;
         this.board[fromY][fromX] = null;
@@ -177,9 +180,13 @@ class CustomChess {
       this.winner = this.turn === 'w' ? 'White' : 'Black';
     }
 
-    this.turn = this.turn === 'w' ? 'b' : 'w';
+    // Update the turn only if it was not a super-effective move
+    if (!superEffectiveMove) {
+      this.turn = this.turn === 'w' ? 'b' : 'w';
+      console.log("Hello");
+    }
 
-    return { valid: true, board: this.board, turn: this.turn, gameOver: this.gameOver, winner: this.winner };
+    return { valid: true, board: this.board, turn: this.turn, gameOver: this.gameOver, winner: this.winner, superEffectiveMove };
   }
 
   isValidMove(piece, from, to) {

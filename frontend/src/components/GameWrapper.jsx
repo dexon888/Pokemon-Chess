@@ -171,7 +171,12 @@ const GameWrapper = ({
       const response = await axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/move/${gameId}`, { from, to });
       setPieces(response.data.pieces);
       setPiecePokemonMap(response.data.piecePokemonMap);
-      setTurn(response.data.turn);
+
+      // Ensure turn is updated correctly based on whether it was a super effective move
+      if (!response.data.superEffectiveMove) {
+        setTurn(response.data.turn);
+      }
+      
       if (response.data.gameOver) {
         setGameOver(`${response.data.winner} wins by capturing the king!`);
       }

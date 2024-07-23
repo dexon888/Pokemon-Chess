@@ -109,9 +109,7 @@ io.on('connection', (socket) => {
     }
   });
 
-
   socket.on('joinGame', async ({ gameId, username }) => {
-
     try {
       const game = await Game.findOne({ gameId });
 
@@ -177,14 +175,12 @@ io.on('connection', (socket) => {
         if (result.valid) {
           game.fen = chess.getFen();
           game.updated_at = Date.now();
-          game.turn = chess.getTurn(); // Switch turn
+          game.turn = result.superEffectiveMove ? game.turn : chess.getTurn(); // Keep the same turn if giving another turn
 
-          // Update pieces based on new board state without reinitializing
-          const updatedPieces = new Map(game.pieces); // Ensure proper Map type
+          const updatedPieces = new Map(game.pieces);
           const fromKey = `${from[0]}${from[1]}`;
           const toKey = `${to[0]}${to[1]}`;
 
-          // Handle piece movement
           const attackingPiece = updatedPieces.get(fromKey);
           const defendingPiece = updatedPieces.get(toKey);
           const attackingPlayer = game.players[attackingPiece.color === 'white' ? 'white' : 'black'];
@@ -227,31 +223,31 @@ io.on('connection', (socket) => {
             fen: chess.getBoardState(),
             turn: game.turn,
             move: { from, to },
-            pieces: Object.fromEntries(game.pieces), // Convert map to object for transmission
-            piecePokemonMap: Object.fromEntries(game.piecePokemonMap) // Convert map to object for transmission
+            pieces: Object.fromEntries(game.pieces),
+            piecePokemonMap: Object.fromEntries(game.piecePokemonMap)
           });
           io.to(game.players.black.id).emit('gameState', {
             fen: chess.getBoardState(),
             turn: game.turn,
             move: { from, to },
-            pieces: Object.fromEntries(game.pieces), // Convert map to object for transmission
-            piecePokemonMap: Object.fromEntries(game.piecePokemonMap) // Convert map to object for transmission
+            pieces: Object.fromEntries(game.pieces),
+            piecePokemonMap: Object.fromEntries(game.piecePokemonMap)
           });
 
           if (result.gameOver) {
-          const winner = game.players[result.winner === 'w' ? 'black' : 'white'].name;
-          const loser = game.players[result.winner === 'w' ? 'white' : 'black'].name;
-          const victoryMessage = `${winner} has defeated ${loser}`;
-          io.to(game.players.white.id).emit('gameOver', { winner: result.winner });
-          io.to(game.players.black.id).emit('gameOver', { winner: result.winner });
-          io.to(game.players.white.id).emit('newMessage', victoryMessage);
-          io.to(game.players.black.id).emit('newMessage', victoryMessage);
-          console.log(`${result.winner} wins by capturing the king`);
-        }
+            const winner = game.players[result.winner === 'w' ? 'black' : 'white'].name;
+            const loser = game.players[result.winner === 'w' ? 'white' : 'black'].name;
+            const victoryMessage = `${winner} has defeated ${loser}`;
+            io.to(game.players.white.id).emit('gameOver', { winner: result.winner });
+            io.to(game.players.black.id).emit('gameOver', { winner: result.winner });
+            io.to(game.players.white.id).emit('newMessage', victoryMessage);
+            io.to(game.players.black.id).emit('newMessage', victoryMessage);
+            console.log(`${result.winner} wins by capturing the king`);
+          }
 
           return res.status(200).json({
-            pieces: Object.fromEntries(game.pieces), // Convert map to object for transmission
-            piecePokemonMap: Object.fromEntries(game.piecePokemonMap), // Convert map to object for transmission
+            pieces: Object.fromEntries(game.pieces),
+            piecePokemonMap: Object.fromEntries(game.piecePokemonMap),
             turn: game.turn,
             gameOver: result.gameOver,
             winner: result.winner
